@@ -8,15 +8,14 @@ void FlagPassed(const char*, void*) {
 }
 
 int main(int argc, const char* const* argv) {
-  CliOption opt_a = { "a flag", &FlagPassed, NULL };
+  CliOption opt_a = { "a flag   b", &FlagPassed, NULL };
 
-  CliOption* options[] = {
-    &opt_a
-  };
+  CliOption* options[] = { &opt_a };
 
-  CliParser parser = { 1, 0, options, NULL };
+  CliParser parser = { sizeof(options)/sizeof(*options), 0, options, NULL };
 
-  CliParse(argv + 1, argv + argc, &parser);
+  if (CliParse(argv + 1, argv + argc, &parser))
+    return 1;
 
   return 0;
 }
