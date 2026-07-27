@@ -16,6 +16,7 @@ TEST(1) {
     CliOption* options[] = { &opt_a };
     CliParser parser = { 1, 0, options, NULL };
 
+    // short option ------------------------------------------------------------
     {
         cnt = 0;
         const char* args[] = { NULL };

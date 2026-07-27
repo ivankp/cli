@@ -36,7 +36,7 @@ if [ ${#compilers[@]} -eq 0 ]; then
     exit 1
 fi
 
-[ ${#stds[@]} -eq 0 ] && stds=(c99 c11)
+[ ${#stds[@]} -eq 0 ] && stds=(c99 c11 c23)
 
 [ ${#suites[@]} -eq 0 ] && suites=(tests-*.c)
 if [ ${#suites[@]} -eq 0 ]; then

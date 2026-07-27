@@ -7,6 +7,36 @@
 #define CLI_OPT_LONG 3
 #define CLI_DOUBLE_DASH 4
 
+CliOption* CliMatchOption(CliParser* parser, const char* arg, unsigned len) {
+  CliOption **opts = parser->options, **optsEnd = opts + parser->nOptions;
+  for (; opts != optsEnd; ++opts) {
+    CliOption* opt = *opts;
+    const char* name = opt->name;
+next_name:
+    for (unsigned i = 0; ; ++i) {
+      if (i == len && (*name == '\0' || *name == ' '))
+        return opt;
+      if (*name != arg[i])
+        break;
+      ++name;
+    }
+skip_name:
+    switch (*name) {
+      case '\0': continue; // opt loop
+      case ' ': ++name; break;
+      default: ++name; goto skip_name;
+    }
+skip_space:
+    switch (*name) {
+      case ' ': ++name; goto skip_space;
+      case '\0': continue; // opt loop
+      default: ;
+    }
+    goto next_name;
+  }
+  return NULL;
+}
+
 int CliParse(CliParser* parser, const char* const* args, const char* const* argsEnd) {
   unsigned flags = 0;
   for (; args != argsEnd; ++args) {
@@ -28,39 +58,15 @@ value:
       }
 
     } else if (arg[1] != '-') { // short option
-      const char c = arg[1];
       flags |= CLI_OPT_SHORT;
-      CliOption **opts = parser->options, **optsEnd = opts + parser->nOptions;
-      for (; opts != optsEnd; ++opts) { // find option with matching name
-        CliOption* opt = *opts;
-        const char* name = opt->name;
-next_name:
-        if (name[0] == c && (name[1] == '\0' || name[1] == ' ')) {
-          (*opt->action)(arg + 2, opt->data);
-          opts = NULL;
-          break; // opt loop
-        } else {
-skip_name:
-          switch (*name) {
-            case '\0': continue; // opt loop
-            case ' ': ++name; break;
-            default: ++name; goto skip_name;
-          }
-skip_space:
-          switch (*name) {
-            case ' ': ++name; goto skip_space;
-            case '\0': continue; // opt loop
-            default: ;
-          }
-          goto next_name;
-        }
-      }
-      if (opts) {
+      CliOption* opt = CliMatchOption(parser, arg + 1, 1);
+      if (!opt) {
 #ifndef CLI_UNIT_TEST
-        printf("Unexpected option -%c\n", c);
+        printf("Unexpected option -%c\n", arg[1]);
 #endif
         return 1;
       }
+      (*opt->action)(arg + 2, opt->data);
 
     } else if (!arg[2]) { // just --
       flags ^= CLI_DOUBLE_DASH;
