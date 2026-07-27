@@ -1,20 +1,18 @@
 #define ALL_TESTS \
-  TEST(test1) \
-  TEST(test2) \
-  TEST(test3)
+  TEST(1)
 
 #include "testing.h"
 
 #include "cli.h"
 
-void FlagPassed(const char* value, void* cnt) {
+void CountOpt(const char* value, void* cnt) {
     (void) value;
     ++*(int*)cnt;
 }
 
-TEST(test1) {
+TEST(1) {
     int cnt = 0;
-    CliOption opt_a = { "a flag   b", &FlagPassed, &cnt };
+    CliOption opt_a = { "a flag   b", &CountOpt, &cnt };
     CliOption* options[] = { &opt_a };
     CliParser parser = { 1, 0, options, NULL };
 
@@ -76,10 +74,24 @@ TEST(test1) {
         const char* args[] = { "-a", "-A" };
         TEST_NE(CliParse(&parser, args, args + 2), 0);
     }
-}
 
-TEST(test2) {
-}
-
-TEST(test3) {
+    // double dash -------------------------------------------------------------
+    {
+        cnt = 0;
+        const char* args[] = { "-a", "--" };
+        TEST_EQ(CliParse(&parser, args, args + 2), 0);
+        TEST_EQ(cnt, 1);
+    }
+    {
+        cnt = 0;
+        const char* args[] = { "--", "-a" };
+        TEST_EQ(CliParse(&parser, args, args + 2), 0);
+        TEST_EQ(cnt, 0);
+    }
+    {
+        cnt = 0;
+        const char* args[] = { "--", "-a", "--", "-a" };
+        TEST_EQ(CliParse(&parser, args, args + 4), 0);
+        TEST_EQ(cnt, 1);
+    }
 }
