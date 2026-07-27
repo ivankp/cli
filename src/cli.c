@@ -1,13 +1,12 @@
 #include "cli.h"
+
 #include <stdio.h>
 
 #define CLI_OPT 1
 #define CLI_OPT_SHORT 1
 #define CLI_OPT_LONG 3
 
-int CliParse(const char* const* args, const char* const* argsEnd, CliParser* parser) {
-  (void) parser;
-
+int CliParse(CliParser* parser, const char* const* args, const char* const* argsEnd) {
   // unsigned flags = 0;
 
   for (; args != argsEnd; ++args) {
@@ -43,7 +42,9 @@ skip_space:
         }
       }
       if (opts) {
+#ifndef CLI_UNIT_TEST
         printf("Unexpected option -%c\n", c);
+#endif
         return 1;
       }
     } else if (!arg[2]) { // just --
