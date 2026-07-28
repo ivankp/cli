@@ -30,9 +30,8 @@ skip_space:
     switch (*name) {
       case ' ': ++name; goto skip_space;
       case '\0': continue; // opt loop
-      default: ;
+      default: goto next_name;
     }
-    goto next_name;
   }
   return NULL;
 }

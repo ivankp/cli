@@ -5,6 +5,11 @@
 
 #include "cli.h"
 
+void DoNothing(const char* value, void* data) {
+    (void) value;
+    (void) data;
+}
+
 void CountOpt(const char* value, void* cnt) {
     (void) value;
     ++*(int*)cnt;
@@ -13,7 +18,8 @@ void CountOpt(const char* value, void* cnt) {
 TEST(1) {
     int cnt = 0;
     CliOption opt_a = { "a flag   b", &CountOpt, &cnt };
-    CliOption* options[] = { &opt_a };
+    CliOption opt_2 = { "aa bb ab ba", &DoNothing, NULL };
+    CliOption* options[] = { &opt_a, &opt_2 };
     CliParser parser = { 1, 0, options, NULL };
 
     // short option ------------------------------------------------------------
