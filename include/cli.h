@@ -23,6 +23,6 @@ struct CliParser {
   CliCommand** commands;
 };
 
-int CliParse(CliParser* parser, const char* const* args, const char* const* argsEnd);
+int CliParse(CliParser* parser, const char* const* args, unsigned nArgs);
 
 #endif

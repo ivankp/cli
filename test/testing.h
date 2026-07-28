@@ -4,6 +4,8 @@
 #define STR(X) STR1(X)
 #define STR1(X) #X
 
+#define LEN(ARR) (sizeof((ARR)) / sizeof(*(ARR)))
+
 //------------------------------------------------------------------------------
 
 #define TEST_EQ(LHS, RHS) \
