@@ -45,14 +45,14 @@ int CliParse(CliParser* parser, const char* const* args, unsigned nArgs) {
   for (; args != argsEnd; ++args) {
     const char* arg = *args;
 
-    if (flags & CLI_DOUBLE_DASH) {
+    if (flags & CLI_DOUBLE_DASH) { // ..........................................
       if (arg[0] == '-' && arg[1] == '-' && arg[2] == '\0') {
         flags ^= CLI_DOUBLE_DASH;
       } else {
         goto value;
       }
 
-    } else if (arg[0] != '-' || arg[1] == '\0') { // value or command
+    } else if (arg[0] != '-' || arg[1] == '\0') { // value or command ..........
       if (0) { // TODO: may be a command
 
       } else {
@@ -60,27 +60,34 @@ value:
         ;
       }
 
-    } else if (arg[1] != '-') { // short option
+    } else if (arg[1] != '-') { // short option ................................
       flags |= CLI_OPT_SHORT;
       CliOption* opt = CliMatchOption(parser, arg + 1, 1);
       if (!opt) {
 #ifndef CLI_UNIT_TEST
-        printf("Unexpected option -%c\n", arg[1]);
+        fprintf(stderr, "Unexpected option -%c\n", arg[1]);
 #endif
         return 1;
       }
-      (*opt->action)(arg + 2, opt->data);
+      const char* value = arg + 2;
+      if (*value == '\0')
+        value = NULL;
+      (*opt->action)(value, opt->data);
 
-    } else if (arg[2] == '\0') { // just --
+    } else if (arg[2] == '\0') { // just -- ....................................
       flags ^= CLI_DOUBLE_DASH;
 
-    } else { // long option
+    } else { // long option ....................................................
       flags |= CLI_OPT_LONG;
-      const char *a = arg + 2, *b = a;
+      const char *a = arg + 2, *b = a, *value;
       for (;; ++b) {
         switch (*b) {
           case '\0':
-          case '=': goto opt_name_end;
+            value = NULL;
+            goto opt_name_end;
+          case '=':
+            value = b + 1;
+            goto opt_name_end;
         }
       }
 opt_name_end: ;
@@ -88,12 +95,12 @@ opt_name_end: ;
       CliOption* opt = CliMatchOption(parser, a, n);
       if (!opt) {
 #ifndef CLI_UNIT_TEST
-        printf("Unexpected option --%.*s\n", (int)n, a);
+        fprintf(stderr, "Unexpected option --%.*s\n", (int)n, a);
 #endif
         return 1;
       }
-      (*opt->action)(b + 1, opt->data);
+      (*opt->action)(value, opt->data);
     }
-  }
+  } // end args loop
   return 0;
 }

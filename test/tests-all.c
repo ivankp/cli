@@ -1,10 +1,11 @@
 #define ALL_TESTS \
   TEST(1) \
-  TEST(2)
+  TEST(2) \
+  TEST(3)
 
 #include "testing.h"
-
 #include "cli.h"
+#include "string.h"
 
 void DoNothing(const char* value, void* data) {
     (void) value;
@@ -21,7 +22,7 @@ TEST(1) {
     CliOption opt_a = { "a flag   b", &CountOpt, &cnt };
     CliOption opt_2 = { "aa bb ab ba", &DoNothing, NULL };
     CliOption* options[] = { &opt_a, &opt_2 };
-    CliParser parser = { 2, 0, options, NULL };
+    CliParser parser = { LEN(options), 0, options, NULL };
 
     // short option ------------------------------------------------------------
     {
@@ -110,7 +111,7 @@ TEST(2) {
     CliOption opt_a = { "a opt-a", &CountOpt, &cntA };
     CliOption opt_b = { "opt-b b", &CountOpt, &cntB };
     CliOption* options[] = { &opt_a, &opt_b };
-    CliParser parser = { 2, 0, options, NULL };
+    CliParser parser = { LEN(options), 0, options, NULL };
 
     // short option ------------------------------------------------------------
     {
@@ -166,5 +167,47 @@ TEST(2) {
         cntB = 0;
         const char* args[] = { "--opt-a " };
         TEST_NE(CliParse(&parser, args, LEN(args)), 0);
+    }
+}
+
+void SetString(const char* value, void* strPtr) {
+    *(const char**)strPtr = value;
+}
+
+TEST(3) {
+    const char* value = "default";
+    CliOption opt = { "a opt-a", &SetString, &value };
+    CliOption* options[] = { &opt };
+    CliParser parser = { LEN(options), 0, options, NULL };
+
+    {
+        const char* args[] = { NULL };
+        TEST_EQ(CliParse(&parser, args, 0), 0);
+        TEST_EQ(strcmp(value, "default"), 0);
+    }
+    {
+        const char* args[] = { "-a" };
+        TEST_EQ(CliParse(&parser, args, LEN(args)), 0);
+        TEST_EQ(value, NULL);
+    }
+    {
+        const char* args[] = { "-anew" };
+        TEST_EQ(CliParse(&parser, args, LEN(args)), 0);
+        TEST_EQ(strcmp(value, "new"), 0);
+    }
+    {
+        const char* args[] = { "--opt-a" };
+        TEST_EQ(CliParse(&parser, args, LEN(args)), 0);
+        TEST_EQ(value, NULL);
+    }
+    {
+        const char* args[] = { "--opt-a=" };
+        TEST_EQ(CliParse(&parser, args, LEN(args)), 0);
+        TEST_EQ(strcmp(value, ""), 0);
+    }
+    {
+        const char* args[] = { "--opt-a=new" };
+        TEST_EQ(CliParse(&parser, args, LEN(args)), 0);
+        TEST_EQ(strcmp(value, "new"), 0);
     }
 }
