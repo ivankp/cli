@@ -39,6 +39,38 @@ skip_space:
   return NULL;
 }
 
+CliCommand* CliMatchCommand(CliParser* parser, const char* arg) {
+  CliCommand **cmds = parser->commands, **cmdsEnd = cmds + parser->nCommands;
+  for (; cmds != cmdsEnd; ++cmds) {
+    CliCommand* cmd = *cmds;
+    const char* name = cmd->name;
+next_name:
+    for (const char* a = arg; ; ++a, ++name) {
+      if (*a == '\0') {
+        switch (*name) {
+          case '\0':
+          case ' ': return cmd;
+        }
+      }
+      if (*name != *a)
+        goto skip_name;
+    }
+skip_name:
+    switch (*name) {
+      case '\0': continue; // next command
+      case ' ': ++name; goto skip_space;
+      default: ++name; goto skip_name;
+    }
+skip_space:
+    switch (*name) {
+      case ' ': ++name; goto skip_space;
+      case '\0': continue; // next command
+      default: goto next_name;
+    }
+  }
+  return NULL;
+}
+
 int CliParse(CliParser* parser, const char* const* args, unsigned nArgs) {
   unsigned flags = 0;
   const char* const* const argsEnd = args + nArgs;
@@ -53,8 +85,10 @@ int CliParse(CliParser* parser, const char* const* args, unsigned nArgs) {
       }
 
     } else if (arg[0] != '-' || arg[1] == '\0') { // value or command ..........
-      if (0) { // TODO: may be a command
-
+      CliCommand* cmd = CliMatchCommand(parser, arg);
+      if (cmd) {
+        // TODO: finalize options for the previous command level
+        parser = cmd->parser;
       } else {
 value:
         ;
@@ -84,13 +118,13 @@ value:
         switch (*b) {
           case '\0':
             value = NULL;
-            goto opt_name_end;
+            goto match_option;
           case '=':
             value = b + 1;
-            goto opt_name_end;
+            goto match_option;
         }
       }
-opt_name_end: ;
+match_option: ;
       const unsigned n = b - a;
       CliOption* opt = CliMatchOption(parser, a, n);
       if (!opt) {
