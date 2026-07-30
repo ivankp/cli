@@ -71,6 +71,44 @@ skip_space:
   return NULL;
 }
 
+void CliParseHelp(CliParser* parser, const char* const* args, unsigned nArgs) {
+  unsigned flags = 0;
+  const char* const* const argsEnd = args + nArgs;
+  for (; args != argsEnd; ++args) {
+    const char* arg = *args;
+
+    if (flags & CLI_DOUBLE_DASH) { // ..........................................
+      if (arg[0] == '-' && arg[1] == '-' && arg[2] == '\0') {
+        flags ^= CLI_DOUBLE_DASH;
+      }
+
+    } else if (arg[0] != '-' || arg[1] == '\0') { // value or command ..........
+      CliCommand* cmd = CliMatchCommand(parser, arg);
+      if (cmd) {
+        parser = cmd->parser;
+      }
+
+    } else if (arg[1] != '-') { // short option ................................
+      for (++arg; *arg == 'h'; ++arg)
+        ++help;
+      break;
+
+    } else if (arg[2] == '\0') { // just -- ....................................
+      flags ^= CLI_DOUBLE_DASH;
+
+    } else { // long option ....................................................
+      ++arg;
+      if (*++arg == 'h' && *++arg == 'e' && *++arg == 'l' && *++arg == 'p') {
+        if (*++arg == '\0' || *arg == '=')
+          goto help;
+      }
+    }
+  } // end args loop
+  return;
+help:
+  printf("HELP\n");
+}
+
 int CliParse(CliParser* parser, const char* const* args, unsigned nArgs) {
   unsigned flags = 0;
   const char* const* const argsEnd = args + nArgs;
