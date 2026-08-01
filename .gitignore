@@ -1,1 +1,5 @@
 test/build
+
+examples/
+!examples/*.c
+!examples/Makefile

@@ -8,33 +8,30 @@
 
 //------------------------------------------------------------------------------
 
-#define TEST_EQ(LHS, RHS) \
-    if (!( (LHS) == (RHS) )) { \
-        puts("\033[31m" __FILE__ ":" STR(__LINE__) ": " #LHS " != " #RHS "\033[0m"); \
-        exit(1); \
-    }
+#define TEST_PREFIX \
+    "\033[31m" __FILE__ ":" STR(__LINE__) ": "
 
-#define TEST_NE(LHS, RHS) \
-    if (!( (LHS) != (RHS) )) { \
-        puts("\033[31m" __FILE__ ":" STR(__LINE__) ": " #LHS " == " #RHS "\033[0m"); \
+#define TEST_OP(LHS, OP, RHS) \
+    if (!( (LHS) OP (RHS) )) { \
+        puts(TEST_PREFIX "FAILED\033[0m\n" #LHS " " STR(OP) " " #RHS); \
         exit(1); \
     }
 
 #define TEST_TRUE(X) \
     if (!(X)) { \
-        puts("\033[31m" __FILE__ ":" STR(__LINE__) ": " #X " is false" "\033[0m"); \
+        puts(TEST_PREFIX #X " is false" "\033[0m"); \
         exit(1); \
     }
 
 #define TEST_FALSE(X) \
     if ((X)) { \
-        puts("\033[31m" __FILE__ ":" STR(__LINE__) ": " #X " is true" "\033[0m"); \
+        puts(TEST_PREFIX #X " is true" "\033[0m"); \
         exit(1); \
     }
 
 #define TEST_FAIL \
     { \
-        puts("\033[31m" __FILE__ ":" STR(__LINE__) ": test failed" "\033[0m"); \
+        puts(TEST_PREFIX "test failed" "\033[0m"); \
         exit(1); \
     }
 
