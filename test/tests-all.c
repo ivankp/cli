@@ -19,10 +19,10 @@ void CountOpt(const char* value, void* cnt) {
 
 TEST(short_opt) {
     int cnt = 0;
-    CliOption opt_a = { "a flag   b", &CountOpt, &cnt };
-    CliOption opt_2 = { "aa bb ab ba", &DoNothing, NULL };
+    CliOption opt_a = { "a flag   b", &CountOpt, &cnt, NULL };
+    CliOption opt_2 = { "aa bb ab ba", &DoNothing, NULL, NULL };
     CliOption* options[] = { &opt_a, &opt_2 };
-    CliParser parser = { NULL, LEN(options), 0, options, NULL };
+    CliParser parser = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
 
     // short option ------------------------------------------------------------
     {
@@ -108,10 +108,10 @@ TEST(short_opt) {
 TEST(long_opt) {
     int cntA = 0;
     int cntB = 0;
-    CliOption opt_a = { "a opt-a", &CountOpt, &cntA };
-    CliOption opt_b = { "opt-b b", &CountOpt, &cntB };
+    CliOption opt_a = { "a opt-a", &CountOpt, &cntA, NULL };
+    CliOption opt_b = { "opt-b b", &CountOpt, &cntB, NULL };
     CliOption* options[] = { &opt_a, &opt_b };
-    CliParser parser = { NULL, LEN(options), 0, options, NULL };
+    CliParser parser = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
 
     // short option ------------------------------------------------------------
     {
@@ -176,9 +176,9 @@ void SetString(const char* value, void* strPtr) {
 
 TEST(explicit_value) {
     const char* value = "default";
-    CliOption opt = { "a opt-a", &SetString, &value };
+    CliOption opt = { "a opt-a", &SetString, &value, NULL };
     CliOption* options[] = { &opt };
-    CliParser parser = { NULL, LEN(options), 0, options, NULL };
+    CliParser parser = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
 
     {
         const char* args[] = { NULL };

@@ -19,6 +19,7 @@ CliOption* CliMatchOption(CliParser* parser, const char* arg, unsigned argLen) {
   for (; opts != optsEnd; ++opts) {
     CliOption* opt = *opts;
     const char* name = opt->name;
+    // TODO: skip spaces first
 next_name:
     for (unsigned i = 0; ; ++i, ++name) {
       if (i == argLen) {
@@ -51,6 +52,7 @@ CliParser* CliMatchCommand(CliParser* parser, const char* arg) {
   for (; cmds != cmdsEnd; ++cmds) {
     CliParser* cmd = *cmds;
     const char* name = cmd->name;
+    // TODO: skip spaces first
 next_name:
     for (const char* a = arg; ; ++a, ++name) {
       if (*a == '\0') {
@@ -170,7 +172,9 @@ skip_space:
 }
 
 int CliParse(CliParser* parser, const char* const* args, unsigned nArgs) {
+#ifndef CLI_UNIT_TEST
   CliParser* rootParser = parser;
+#endif
   unsigned flags = 0;
   const char* const* const argsEnd = args + nArgs;
   for (; args != argsEnd; ++args) {
@@ -197,6 +201,8 @@ value:
     } else if (arg[1] != '-') { // short option ................................
       if (arg[1] == 'h')
         goto help;
+
+      // TODO: -abcd
 
       CliOption* opt = CliMatchOption(parser, arg + 1, 1);
       if (!opt) {
@@ -247,6 +253,8 @@ match_option: ;
       (*opt->action)(value, opt->data);
     }
   } // end args loop
+
+  // TODO: `--opt arg` same as `--opt=arg`
 
   return 0;
 

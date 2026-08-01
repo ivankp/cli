@@ -62,11 +62,11 @@ for suite in "${suites[@]}"; do
 
     for comp in "${compilers[@]}"; do
         if [ "$comp" = 'gcc' ]; then
-            nerr='-fmax-errors=3'
+            comp_args=(-fmax-errors=3)
         elif [ "$comp" = 'clang' ]; then
-            nerr='-ferror-limit=3'
+            comp_args=(-ferror-limit=3 -Wno-string-plus-int)
         else
-            unset nerr
+            unset comp_args
         fi
         for std in "${stds[@]}"; do
             exe="build/${suite%%.c}-$std-$comp"
@@ -84,7 +84,7 @@ for suite in "${suites[@]}"; do
                     cmd=("$comp" \
                         -std="$std" \
                         -Wall -Wextra -Werror -pedantic \
-                        $nerr \
+                        "${comp_args[@]}" \
                         -I. -I../include \
                         -DCLI_UNIT_TEST \
                         "${srcs[@]}" "$suite" -o "$exe")

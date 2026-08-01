@@ -1,5 +1,5 @@
-#ifndef IVAN_CLI_HH
-#define IVAN_CLI_HH
+#ifndef CLI_H
+#define CLI_H
 
 typedef struct CliOption CliOption;
 typedef struct CliParser CliParser;
