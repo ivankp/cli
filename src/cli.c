@@ -14,8 +14,8 @@ next:
   }
 }
 
-CliOption* CliMatchOption(CliParser* parser, const char* arg, unsigned argLen) {
-  CliOption **opts = parser->options, **optsEnd = opts + parser->nOptions;
+CliOption* CliMatchOption(CliCommand* command, const char* arg, unsigned argLen) {
+  CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
   for (; opts != optsEnd; ++opts) {
     CliOption* opt = *opts;
     const char* name = opt->name;
@@ -47,10 +47,10 @@ skip_space:
   return NULL;
 }
 
-CliParser* CliMatchCommand(CliParser* parser, const char* arg) {
-  CliParser **cmds = parser->commands, **cmdsEnd = cmds + parser->nCommands;
+CliCommand* CliMatchCommand(CliCommand* command, const char* arg) {
+  CliCommand **cmds = command->commands, **cmdsEnd = cmds + command->nCommands;
   for (; cmds != cmdsEnd; ++cmds) {
-    CliParser* cmd = *cmds;
+    CliCommand* cmd = *cmds;
     const char* name = cmd->name;
     // TODO: skip spaces first
 next_name:
@@ -80,7 +80,7 @@ skip_space:
   return NULL;
 }
 
-void CliPrintHelp(CliParser* cmd) {
+void CliPrintHelp(CliCommand* cmd) {
   printf("usage:");
   for (;;) {
     const char* name = cmd->name;
@@ -115,8 +115,8 @@ next_char_2:
   }
   printf("\n");
 
-  { // Top text
-    const char* h = cmd->helpTop;
+  { // Top help text
+    const char* h = cmd->help;
     if (h && *h) {
       printf("\n%s\n", h);
     }
@@ -163,7 +163,7 @@ skip_space:
     }
   }
 
-  { // Bottom text
+  { // Bottom help text
     const char* h = cmd->helpBottom;
     if (h && *h) {
       printf("\n%s\n", h);
@@ -171,9 +171,9 @@ skip_space:
   }
 }
 
-int CliParse(CliParser* parser, const char* const* args, unsigned nArgs) {
+int CliParse(CliCommand* command, const char* const* args, unsigned nArgs) {
 #ifndef CLI_UNIT_TEST
-  CliParser* rootParser = parser;
+  CliCommand* rootCommand = command;
 #endif
   unsigned flags = 0;
   const char* const* const argsEnd = args + nArgs;
@@ -188,10 +188,10 @@ int CliParse(CliParser* parser, const char* const* args, unsigned nArgs) {
       }
 
     } else if (arg[0] != '-' || arg[1] == '\0') { // value or command ..........
-      CliParser* cmd = CliMatchCommand(parser, arg);
+      CliCommand* cmd = CliMatchCommand(command, arg);
       if (cmd) {
-        parser->command = cmd;
-        parser = cmd;
+        command->command = cmd;
+        command = cmd;
         // TODO: finalize options for the previous command level
       } else {
 value:
@@ -204,7 +204,7 @@ value:
 
       // TODO: -abcd
 
-      CliOption* opt = CliMatchOption(parser, arg + 1, 1);
+      CliOption* opt = CliMatchOption(command, arg + 1, 1);
       if (!opt) {
 #ifndef CLI_UNIT_TEST
         fprintf(stderr, "Unknown option -%c\n", arg[1]);
@@ -242,7 +242,7 @@ value:
 
 match_option: ;
       const unsigned n = b - a;
-      CliOption* opt = CliMatchOption(parser, a, n);
+      CliOption* opt = CliMatchOption(command, a, n);
       if (!opt) {
 #ifndef CLI_UNIT_TEST
         fprintf(stderr, "Unknown option --%.*s\n", (int)n, a);
@@ -260,7 +260,7 @@ match_option: ;
 
 help:
 #ifndef CLI_UNIT_TEST
-  CliPrintHelp(rootParser);
+  CliPrintHelp(rootCommand);
 #endif
   return -1;
 }

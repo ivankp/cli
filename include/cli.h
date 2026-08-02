@@ -2,7 +2,7 @@
 #define CLI_H
 
 typedef struct CliOption CliOption;
-typedef struct CliParser CliParser;
+typedef struct CliCommand CliCommand;
 
 struct CliOption {
   const char* name;
@@ -11,18 +11,18 @@ struct CliOption {
   const char* help;
 };
 
-struct CliParser {
+struct CliCommand {
   const char* name;
   unsigned nOptions;
   unsigned nCommands;
   CliOption** options;
-  CliParser** commands;
-  const char* helpTop;
+  CliCommand** commands;
+  const char* help;
   const char* helpBottom;
-  CliParser* command;
+  CliCommand* command;
 };
 
-int CliParse(CliParser* parser, const char* const* args, unsigned nArgs);
+int CliParse(CliCommand* command, const char* const* args, unsigned nArgs);
 
 const char* CliPathName(const char* arg);
 

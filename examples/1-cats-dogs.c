@@ -15,12 +15,12 @@ int main(int argc, const char* const* argv) {
     CliOption optCat = { "c cat", &Count, &cats, "Increment the cat counter" };
     CliOption optDog = { "dog d", &Count, &dogs, "Increment the dog counter" };
     CliOption* opts[] = { &optCat, &optDog };
-    CliParser parser = {
+    CliCommand cmd = {
         CliPathName(argv[0]), LEN(opts), 0, opts, NULL,
         "Count cats and dogs", "", NULL
     };
 
-    int ec = CliParse(&parser, argv + 1, argc - 1);
+    int ec = CliParse(&cmd, argv + 1, argc - 1);
     if (ec != 0)
         return ec > 0;
 
