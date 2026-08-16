@@ -1,6 +1,10 @@
 #include "cli.h"
 
+#ifndef CLI_UNIT_TEST
 #include <stdio.h>
+#else
+#include <stddef.h>
+#endif
 
 #define CLI_DOUBLE_DASH 2
 
