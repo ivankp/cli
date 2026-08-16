@@ -9,42 +9,49 @@ const char* CliPathName(const char* path) {
 next:
   switch (*path++) {
     case '\0': return name;
+#ifdef _WIN32
+    case '\\':
+#endif
     case '/': name = path;
     default: goto next;
   }
 }
 
-CliOption* CliMatchOption(CliCommand* command, const char* arg, unsigned len) {
+static int CliMatchName(const char* name, const char* arg, const char* end) {
+  const char* a;
+skip_space:
+  switch (*name) {
+    case ' ': ++name; goto skip_space;
+    case '\0': return 0; // didn't match
+  }
+  a = arg;
+compare:
+  if (end ? a == end : *a == '\0') {
+    switch (*name) {
+      case '\0':
+      case ' ': return 1; // matched
+      default: goto skip_name;
+    }
+  }
+  if (*name == *a) {
+    ++name;
+    ++a;
+    goto compare;
+  }
+skip_name:
+  switch (*name) {
+    case '\0': return 0; // didn't match
+    case ' ': ++name; goto skip_space;
+    default: ++name; goto skip_name;
+  }
+}
+
+CliOption* CliMatchOption(CliCommand* command, const char* arg, const char* end) {
   CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
   for (; opts != optsEnd; ++opts) {
     CliOption* opt = *opts;
-    const char* name = opt->name;
-    unsigned i;
-skip_space:
-    switch (*name) {
-      case ' ': ++name; goto skip_space;
-      case '\0': continue; // next option
-    }
-    i = 0;
-compare:
-    if (i == len) {
-      switch (*name) {
-        case '\0':
-        case ' ': return opt;
-        default: goto skip_letter;
-      }
-    }
-    if (*name == arg[i]) {
-      ++i;
-      ++name;
-      goto compare;
-    }
-skip_letter:
-    switch (*name) {
-      case '\0': continue; // next option
-      case ' ': ++name; goto skip_space;
-      default: ++name; goto skip_letter;
-    }
+    if (CliMatchName(opt->name, arg, end))
+      return opt;
   }
   return NULL;
 }
@@ -53,31 +60,8 @@ CliCommand* CliMatchCommand(CliCommand* command, const char* arg) {
   CliCommand **cmds = command->commands, **cmdsEnd = cmds + command->nCommands;
   for (; cmds != cmdsEnd; ++cmds) {
     CliCommand* cmd = *cmds;
-    const char* name = cmd->name;
-    // TODO: skip spaces first
-next_name:
-    for (const char* a = arg; ; ++a, ++name) {
-      if (*a == '\0') {
-        switch (*name) {
-          case '\0':
-          case ' ': return cmd;
-        }
-      }
-      if (*name != *a)
-        goto skip_name;
-    }
-skip_name:
-    switch (*name) {
-      case '\0': continue; // next command
-      case ' ': ++name; goto skip_space;
-      default: ++name; goto skip_name;
-    }
-skip_space:
-    switch (*name) {
-      case ' ': ++name; goto skip_space;
-      case '\0': continue; // next command
-      default: goto next_name;
-    }
+    if (CliMatchName(cmd->name, arg, NULL))
+      return cmd;
   }
   return NULL;
 }
@@ -206,7 +190,8 @@ value:
 
       // TODO: -abcd
 
-      CliOption* opt = CliMatchOption(command, arg + 1, 1);
+      const char* value = arg + 2;
+      CliOption* opt = CliMatchOption(command, arg + 1, value);
       if (!opt) {
 #ifndef CLI_UNIT_TEST
         fprintf(stderr, "Unknown option -%c\n", arg[1]);
@@ -214,7 +199,6 @@ value:
         return 1;
       }
 
-      const char* value = arg + 2;
       if (*value == '\0')
         value = NULL;
 
@@ -243,11 +227,10 @@ value:
       }
 
 match_option: ;
-      const unsigned n = b - a;
-      CliOption* opt = CliMatchOption(command, a, n);
+      CliOption* opt = CliMatchOption(command, a, b);
       if (!opt) {
 #ifndef CLI_UNIT_TEST
-        fprintf(stderr, "Unknown option --%.*s\n", (int)n, a);
+        fprintf(stderr, "Unknown option --%.*s\n", (int)(b - a), a);
 #endif
         return 1;
       }
