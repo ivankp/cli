@@ -66,7 +66,8 @@ CliCommand* CliMatchCommand(CliCommand* command, const char* arg) {
   return NULL;
 }
 
-void CliPrintHelp(CliCommand* cmd) {
+#ifndef CLI_UNIT_TEST
+static void CliPrintHelp(CliCommand* cmd) {
   printf("usage:");
   for (;;) {
     const char* name = cmd->name;
@@ -156,6 +157,7 @@ skip_space:
     }
   }
 }
+#endif
 
 int CliParse(CliCommand* command, const char* const* args, unsigned nArgs) {
 #ifndef CLI_UNIT_TEST
