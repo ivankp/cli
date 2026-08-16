@@ -4,44 +4,46 @@
 
 #define CLI_DOUBLE_DASH 2
 
-const char* CliPathName(const char* arg) {
-  const char* name = arg;
+const char* CliPathName(const char* path) {
+  const char* name = path;
 next:
-  switch (*arg++) {
+  switch (*path++) {
     case '\0': return name;
-    case '/': name = arg;
+    case '/': name = path;
     default: goto next;
   }
 }
 
-CliOption* CliMatchOption(CliCommand* command, const char* arg, unsigned argLen) {
+CliOption* CliMatchOption(CliCommand* command, const char* arg, unsigned len) {
   CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
   for (; opts != optsEnd; ++opts) {
     CliOption* opt = *opts;
     const char* name = opt->name;
-    // TODO: skip spaces first
-next_name:
-    for (unsigned i = 0; ; ++i, ++name) {
-      if (i == argLen) {
-        switch (*name) {
-          case '\0':
-          case ' ': return opt;
-        }
-      }
-      if (*name != arg[i])
-        goto skip_name;
-    }
-skip_name:
-    switch (*name) {
-      case '\0': continue; // next option
-      case ' ': ++name; goto skip_space;
-      default: ++name; goto skip_name;
-    }
+    unsigned i;
 skip_space:
     switch (*name) {
       case ' ': ++name; goto skip_space;
       case '\0': continue; // next option
-      default: goto next_name;
+    }
+    i = 0;
+compare:
+    if (i == len) {
+      switch (*name) {
+        case '\0':
+        case ' ': return opt;
+        default: goto skip_letter;
+      }
+    }
+    if (*name == arg[i]) {
+      ++i;
+      ++name;
+      goto compare;
+    }
+skip_letter:
+    switch (*name) {
+      case '\0': continue; // next option
+      case ' ': ++name; goto skip_space;
+      default: ++name; goto skip_letter;
     }
   }
   return NULL;

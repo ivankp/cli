@@ -1,4 +1,5 @@
 #define ALL_TESTS \
+  TEST(match_name) \
   TEST(short_opt) \
   TEST(long_opt) \
   TEST(explicit_value)
@@ -15,6 +16,65 @@ void DoNothing(const char* value, void* data) {
 void CountOpt(const char* value, void* cnt) {
     (void) value;
     ++*(int*)cnt;
+}
+
+TEST(match_name) {
+    {
+        const char* param_opt[] = {
+            "cat", " cat", "   cat", "cat ", "cat  ",
+            "dog cat", "dog  cat", "dog    cat", "dog cat ", "dog cat  ",
+            "cat dog", " cat dog", "   cat dog", "cat  dog", "cat   dog"
+        };
+        const char* param_bad_arg[] = {
+            "--bat", "--ca", "--catt", "--ccat"
+        };
+        for (unsigned i = 0; i < LEN(param_opt); ++i) {
+            int cnt = 0;
+            CliOption opt = { param_opt[i], &CountOpt, &cnt, NULL };
+            CliOption* options[] = { &opt };
+            CliCommand command = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
+
+            {
+                const char* args[] = { "--cat" };
+                TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
+                TEST_OP(cnt, ==, 1);
+            }
+            for (unsigned j = 0; j < LEN(param_bad_arg); ++j) {
+                cnt = 0;
+                const char* args[] = { param_bad_arg[j] };
+                TEST_OP(CliParse(&command, args, LEN(args)), ==, 1);
+                TEST_OP(cnt, ==, 0);
+            }
+        }
+    }
+    {
+        const char* param_opt[] = {
+            "c", " c", "c ", " c ",
+            "c cat", "  c cat", "  c  cat",
+            "cat c", "cat c ", "cat f c", "cat c frog"
+        };
+        const char* param_bad_arg[] = {
+            "-b", "-C", "-d"
+        };
+        for (unsigned i = 0; i < LEN(param_opt); ++i) {
+            int cnt = 0;
+            CliOption opt = { param_opt[i], &CountOpt, &cnt, NULL };
+            CliOption* options[] = { &opt };
+            CliCommand command = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
+
+            {
+                const char* args[] = { "-c" };
+                TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
+                TEST_OP(cnt, ==, 1);
+            }
+            for (unsigned j = 0; j < LEN(param_bad_arg); ++j) {
+                cnt = 0;
+                const char* args[] = { param_bad_arg[j] };
+                TEST_OP(CliParse(&command, args, LEN(args)), ==, 1);
+                TEST_OP(cnt, ==, 0);
+            }
+        }
+    }
 }
 
 TEST(short_opt) {
