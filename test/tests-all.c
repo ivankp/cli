@@ -36,14 +36,14 @@ TEST(match_name) {
 
             {
                 const char* args[] = { "--cat" };
-                TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-                TEST_OP(cnt, ==, 1);
+                TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+                TEST_TRUE(cnt == 1);
             }
             for (unsigned j = 0; j < LEN(param_bad_arg); ++j) {
                 cnt = 0;
                 const char* args[] = { param_bad_arg[j] };
-                TEST_OP(CliParse(&command, args, LEN(args)), ==, 1);
-                TEST_OP(cnt, ==, 0);
+                TEST_TRUE(CliParse(&command, args, LEN(args)) == 1);
+                TEST_TRUE(cnt == 0);
             }
         }
     }
@@ -64,14 +64,14 @@ TEST(match_name) {
 
             {
                 const char* args[] = { "-c" };
-                TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-                TEST_OP(cnt, ==, 1);
+                TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+                TEST_TRUE(cnt == 1);
             }
             for (unsigned j = 0; j < LEN(param_bad_arg); ++j) {
                 cnt = 0;
                 const char* args[] = { param_bad_arg[j] };
-                TEST_OP(CliParse(&command, args, LEN(args)), ==, 1);
-                TEST_OP(cnt, ==, 0);
+                TEST_TRUE(CliParse(&command, args, LEN(args)) == 1);
+                TEST_TRUE(cnt == 0);
             }
         }
     }
@@ -88,80 +88,80 @@ TEST(short_opt) {
     {
         cnt = 0;
         const char* args[] = { NULL };
-        TEST_OP(CliParse(&command, args, 0), ==, 0);
-        TEST_OP(cnt, ==, 0);
+        TEST_TRUE(CliParse(&command, args, 0) == 0);
+        TEST_TRUE(cnt == 0);
     }
     {
         cnt = 0;
         const char* args[] = { "a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 0);
     }
     {
         cnt = 0;
         const char* args[] = { "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 1);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 1);
     }
     {
         cnt = 0;
         const char* args[] = { "-b" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 1);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 1);
     }
     {
         cnt = 0;
         const char* args[] = { "-a", "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 2);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 2);
     }
     {
         cnt = 0;
         const char* args[] = { "-a", "-a", "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 3);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 3);
     }
     {
         cnt = 0;
         const char* args[] = { "-a", "-b" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 2);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 2);
     }
     {
         cnt = 0;
         const char* args[] = { "-b", "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 2);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 2);
     }
     {
         cnt = 0;
         const char* args[] = { "-A" };
-        TEST_OP(CliParse(&command, args, LEN(args)), >, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
     }
     {
         cnt = 0;
         const char* args[] = { "-a", "-A" };
-        TEST_OP(CliParse(&command, args, LEN(args)), >, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
     }
 
     // double dash -------------------------------------------------------------
     {
         cnt = 0;
         const char* args[] = { "-a", "--" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 1);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 1);
     }
     {
         cnt = 0;
         const char* args[] = { "--", "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 0);
     }
     {
         cnt = 0;
         const char* args[] = { "--", "-a", "--", "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cnt, ==, 1);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cnt == 1);
     }
 }
 
@@ -178,17 +178,17 @@ TEST(long_opt) {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cntA, ==, 1);
-        TEST_OP(cntB, ==, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cntA == 1);
+        TEST_TRUE(cntB == 0);
     }
     {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "-b" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cntA, ==, 0);
-        TEST_OP(cntB, ==, 1);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cntA == 0);
+        TEST_TRUE(cntB == 1);
     }
 
     // long option -------------------------------------------------------------
@@ -196,37 +196,37 @@ TEST(long_opt) {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "--opt-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cntA, ==, 1);
-        TEST_OP(cntB, ==, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cntA == 1);
+        TEST_TRUE(cntB == 0);
     }
     {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "--opt-b" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cntA, ==, 0);
-        TEST_OP(cntB, ==, 1);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cntA == 0);
+        TEST_TRUE(cntB == 1);
     }
     {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "-a", "--opt-b", "-b" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(cntA, ==, 1);
-        TEST_OP(cntB, ==, 2);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(cntA == 1);
+        TEST_TRUE(cntB == 2);
     }
     {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "--opt-A" };
-        TEST_OP(CliParse(&command, args, LEN(args)), >, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
     }
     {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "--opt-a " };
-        TEST_OP(CliParse(&command, args, LEN(args)), >, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
     }
 }
 
@@ -242,32 +242,32 @@ TEST(explicit_value) {
 
     {
         const char* args[] = { NULL };
-        TEST_OP(CliParse(&command, args, 0), ==, 0);
-        TEST_OP(strcmp(value, "default"), ==, 0);
+        TEST_TRUE(CliParse(&command, args, 0) == 0);
+        TEST_TRUE(strcmp(value, "default") == 0);
     }
     {
         const char* args[] = { "-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(value, ==, NULL);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(value == NULL);
     }
     {
         const char* args[] = { "-anew" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(strcmp(value, "new"), ==, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(strcmp(value, "new") == 0);
     }
     {
         const char* args[] = { "--opt-a" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(value, ==, NULL);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(value == NULL);
     }
     {
         const char* args[] = { "--opt-a=" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(strcmp(value, ""), ==, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(strcmp(value, "") == 0);
     }
     {
         const char* args[] = { "--opt-a=new" };
-        TEST_OP(CliParse(&command, args, LEN(args)), ==, 0);
-        TEST_OP(strcmp(value, "new"), ==, 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) == 0);
+        TEST_TRUE(strcmp(value, "new") == 0);
     }
 }

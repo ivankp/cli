@@ -9,29 +9,23 @@
 //------------------------------------------------------------------------------
 
 #define TEST_PREFIX \
-    "\033[31m" __FILE__ ":" STR(__LINE__) ": "
-
-#define TEST_OP(LHS, OP, RHS) \
-    if (!( (LHS) OP (RHS) )) { \
-        puts(TEST_PREFIX "FAILED\033[0m\n" #LHS " " STR(OP) " " #RHS); \
-        exit(1); \
-    }
+    "\033[31mFAILED " __FILE__ ":" STR(__LINE__) "\033[0m\n"
 
 #define TEST_TRUE(X) \
     if (!(X)) { \
-        puts(TEST_PREFIX #X " is false" "\033[0m"); \
+        puts(TEST_PREFIX #X " is false"); \
         exit(1); \
     }
 
 #define TEST_FALSE(X) \
     if ((X)) { \
-        puts(TEST_PREFIX #X " is true" "\033[0m"); \
+        puts(TEST_PREFIX #X " is true"); \
         exit(1); \
     }
 
 #define TEST_FAIL \
     { \
-        puts(TEST_PREFIX "test failed" "\033[0m"); \
+        puts(TEST_PREFIX "test failed"); \
         exit(1); \
     }
 
