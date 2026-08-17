@@ -21,7 +21,9 @@ next:
   }
 }
 
-static int CliMatchName(const char* name, const char* arg, const char* end) {
+static int CliMatchName(
+  const char* name, const char* arg, const char* end
+) {
   const char* a;
 skip_space:
   switch (*name) {
@@ -50,7 +52,9 @@ skip_name:
   }
 }
 
-CliOption* CliMatchOption(CliCommand* command, const char* arg, const char* end) {
+CliOption* CliMatchOption(
+  CliCommand* command, const char* arg, const char* end
+) {
   CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
   for (; opts != optsEnd; ++opts) {
     CliOption* opt = *opts;
@@ -60,7 +64,9 @@ CliOption* CliMatchOption(CliCommand* command, const char* arg, const char* end)
   return NULL;
 }
 
-CliCommand* CliMatchCommand(CliCommand* command, const char* arg) {
+CliCommand* CliMatchCommand(
+  CliCommand* command, const char* arg
+) {
   CliCommand **cmds = command->commands, **cmdsEnd = cmds + command->nCommands;
   for (; cmds != cmdsEnd; ++cmds) {
     CliCommand* cmd = *cmds;
@@ -184,7 +190,9 @@ next_char_1:
 #endif
 }
 
-int CliParse(CliCommand* command, const char* const* args, unsigned nArgs) {
+CliStatusCode CliParse(
+  CliCommand* command, const char* const* args, unsigned nArgs
+) {
 #ifndef CLI_UNIT_TEST
   CliCommand* rootCommand = command;
 #endif
@@ -225,7 +233,7 @@ value:
 #ifndef CLI_UNIT_TEST
         fprintf(stderr, "Unknown option -%c\n", *arg);
 #endif
-        return 1;
+        return CLI_STATUS_ERROR;
       }
 
       if (*value == '\0')
@@ -260,7 +268,7 @@ match_option: ;
 #ifndef CLI_UNIT_TEST
         fprintf(stderr, "Unknown option --%.*s\n", (int)(b - arg), arg);
 #endif
-        return 1;
+        return CLI_STATUS_ERROR;
       }
 
       (*opt->action)(value, opt->data);
@@ -269,11 +277,11 @@ match_option: ;
 
   // TODO: `--opt arg` same as `--opt=arg`
 
-  return 0;
+  return CLI_STATUS_OK;
 
 help:
 #ifndef CLI_UNIT_TEST
   cliHelpOption.action(NULL, rootCommand);
 #endif
-  return -1;
+  return CLI_STATUS_HELP;
 }

@@ -1,6 +1,12 @@
 #ifndef CLI_H
 #define CLI_H
 
+typedef enum {
+  CLI_STATUS_HELP = -1,
+  CLI_STATUS_OK = 0,
+  CLI_STATUS_ERROR = 1,
+} CliStatusCode;
+
 typedef struct CliOption CliOption;
 typedef struct CliCommand CliCommand;
 
@@ -26,7 +32,9 @@ struct CliCommand {
   CliCommand* command;
 };
 
-int CliParse(CliCommand* command, const char* const* args, unsigned nArgs);
+CliStatusCode CliParse(
+  CliCommand* command, const char* const* args, unsigned nArgs
+);
 
 const char* CliPathName(const char* arg);
 
