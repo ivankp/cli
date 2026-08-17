@@ -4,12 +4,16 @@
 typedef struct CliOption CliOption;
 typedef struct CliCommand CliCommand;
 
+typedef void (*CliAction)(const char* arg, void* data);
+
 struct CliOption {
   const char* name;
-  void (*action)(const char* arg, void* data);
+  CliAction action;
   void* data;
   const char* help;
 };
+
+extern CliOption cliHelpOption;
 
 struct CliCommand {
   const char* name;

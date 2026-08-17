@@ -71,7 +71,64 @@ CliCommand* CliMatchCommand(CliCommand* command, const char* arg) {
 }
 
 #ifndef CLI_UNIT_TEST
-static void CliPrintHelp(CliCommand* cmd) {
+static void CliPrintHelpOptionUsage(CliOption* opt) {
+  const char* name = opt->name;
+  int n = 0;
+next_char_2:
+  switch (name[n]) {
+    case '\0':
+    case ' ': break;
+    default: ++n; goto next_char_2;
+  }
+  printf(" %s%.*s", "--" + (n == 1), n, name);
+}
+#endif
+
+#ifndef CLI_UNIT_TEST
+static void CliPrintHelpOption(CliOption* opt) {
+  const char *a = opt->name, *b;
+  char sep = ' ';
+
+skip_space:
+  switch (*a) {
+    case ' ': ++a; goto skip_space;
+    case '\0': return;
+  }
+
+  for (b = a; ; ++b) {
+    const char c = *b;
+    if (c == '\0' || c == ' ') {
+      const int n = b - a;
+      if (n > 0) {
+        printf("%c %s%.*s", sep, "--" + (n == 1), n, a);
+        sep = ',';
+      }
+      if (c == '\0')
+        break;
+      a = b + 1;
+      goto skip_space;
+    }
+  }
+  printf("\n");
+  const char* h = opt->help;
+  if (h && *h) {
+    printf("    %s\n", h);
+  }
+}
+#endif
+
+static void CliPrintHelp(const char*, CliCommand*);
+
+CliOption cliHelpOption = {
+  "h help", (CliAction)&CliPrintHelp, NULL,
+  "Print this help message"
+};
+
+static void CliPrintHelp(const char* value, CliCommand* cmd) {
+  (void) value;
+#ifdef CLI_UNIT_TEST
+  (void) cmd;
+#else
   printf("usage:");
   for (;;) {
     const char* name = cmd->name;
@@ -87,18 +144,9 @@ next_char_1:
 
     CliOption **opts = cmd->options, **optsEnd = opts + cmd->nOptions;
     for (; opts != optsEnd; ++opts) {
-      CliOption* opt = *opts;
-      const char* name = opt->name;
-
-      int n = 0;
-next_char_2:
-      switch (name[n]) {
-        case '\0':
-        case ' ': break;
-        default: ++n; goto next_char_2;
-      }
-      printf(" %s%.*s", "--" + (n == 1), n, name);
+      CliPrintHelpOptionUsage(*opts);
     }
+    CliPrintHelpOptionUsage(&cliHelpOption);
 
     if (!cmd->command)
       break;
@@ -107,9 +155,9 @@ next_char_2:
   printf("\n");
 
   { // Top help text
-    const char* h = cmd->help;
-    if (h && *h) {
-      printf("\n%s\n", h);
+    const char* text = cmd->help;
+    if (text && *text) {
+      printf("\n%s\n", text);
     }
   }
 
@@ -122,36 +170,9 @@ next_char_2:
 
     CliOption **opts = cmd->options, **optsEnd = opts + cmd->nOptions;
     for (; opts != optsEnd; ++opts) {
-      CliOption* opt = *opts;
-      const char *a = opt->name, *b;
-      char sep = ' ';
-
-skip_space:
-      switch (*a) {
-        case ' ': ++a; goto skip_space;
-        case '\0': continue; // next option
-      }
-
-      for (b = a; ; ++b) {
-        const char c = *b;
-        if (c == '\0' || c == ' ') {
-          const int n = b - a;
-          if (n > 0) {
-            printf("%c %s%.*s", sep, "--" + (n == 1), n, a);
-            sep = ',';
-          }
-          if (c == '\0')
-            break;
-          a = b + 1;
-          goto skip_space;
-        }
-      }
-      printf("\n");
-      const char* h = opt->help;
-      if (h && *h) {
-        printf("    %s\n", h);
-      }
+      CliPrintHelpOption(*opts);
     }
+    CliPrintHelpOption(&cliHelpOption);
   }
 
   { // Bottom help text
@@ -160,8 +181,8 @@ skip_space:
       printf("\n%s\n", h);
     }
   }
-}
 #endif
+}
 
 int CliParse(CliCommand* command, const char* const* args, unsigned nArgs) {
 #ifndef CLI_UNIT_TEST
@@ -191,16 +212,18 @@ value:
       }
 
     } else if (arg[1] != '-') { // short option ................................
-      if (arg[1] == 'h')
+      ++arg;
+      const char* value = arg + 1;
+      CliOption* opt = CliMatchOption(command, arg, value);
+
+      if (CliMatchName(cliHelpOption.name, arg, value))
         goto help;
 
       // TODO: -abcd
 
-      const char* value = arg + 2;
-      CliOption* opt = CliMatchOption(command, arg + 1, value);
       if (!opt) {
 #ifndef CLI_UNIT_TEST
-        fprintf(stderr, "Unknown option -%c\n", arg[1]);
+        fprintf(stderr, "Unknown option -%c\n", *arg);
 #endif
         return 1;
       }
@@ -214,13 +237,8 @@ value:
       flags ^= CLI_DOUBLE_DASH;
 
     } else { // long option ....................................................
-      const char *a = arg + 2;
-      if (a[0] == 'h' && a[1] == 'e' && a[2] == 'l' && a[3] == 'p') {
-        if (a[4] == '\0' || a[4] == '=')
-          goto help;
-      }
-
-      const char *b = a, *value;
+      arg += 2;
+      const char *b = arg, *value;
       for (;; ++b) {
         switch (*b) {
           case '\0':
@@ -233,10 +251,14 @@ value:
       }
 
 match_option: ;
-      CliOption* opt = CliMatchOption(command, a, b);
+      CliOption* opt = CliMatchOption(command, arg, b);
+
+      if (CliMatchName(cliHelpOption.name, arg, b))
+        goto help;
+
       if (!opt) {
 #ifndef CLI_UNIT_TEST
-        fprintf(stderr, "Unknown option --%.*s\n", (int)(b - a), a);
+        fprintf(stderr, "Unknown option --%.*s\n", (int)(b - arg), arg);
 #endif
         return 1;
       }
@@ -251,7 +273,7 @@ match_option: ;
 
 help:
 #ifndef CLI_UNIT_TEST
-  CliPrintHelp(rootCommand);
+  cliHelpOption.action(NULL, rootCommand);
 #endif
   return -1;
 }
