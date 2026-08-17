@@ -2,9 +2,13 @@
 #define CLI_H
 
 typedef enum {
-  CLI_STATUS_HELP = -1,
   CLI_STATUS_OK = 0,
+
   CLI_STATUS_ERROR = 1,
+
+  CLI_STATUS_HELP = -0x100,
+  CLI_STATUS_COMP = -0xFF,
+  CLI_STATUS_COMP_BASH = -1,
 } CliStatusCode;
 
 typedef struct CliOption CliOption;

@@ -5,6 +5,7 @@
 #else
 #include <stddef.h>
 #endif
+#include <stdbool.h>
 
 #define CLI_DOUBLE_DASH 2
 
@@ -21,21 +22,43 @@ next:
   }
 }
 
-static int CliMatchName(
+static const char* CliEnvVarEnd(const char* var) {
+next:
+  switch (*var) {
+    case '=':
+    case '\0':
+      return var;
+    default:
+      ++var;
+      goto next;
+  }
+}
+
+static bool CliStrEqZE(const char* ref, const char* str, const char* end) {
+  for (;; ++ref, ++str) {
+    const char c = *ref;
+    if (str == end)
+      return c == '\0';
+    if (c == '\0' || c != *str)
+      return false;
+  }
+}
+
+static bool CliMatchName(
   const char* name, const char* arg, const char* end
 ) {
   const char* a;
 skip_space:
   switch (*name) {
     case ' ': ++name; goto skip_space;
-    case '\0': return 0; // didn't match
+    case '\0': return false; // didn't match
   }
   a = arg;
 compare:
   if (end ? a == end : *a == '\0') {
     switch (*name) {
       case '\0':
-      case ' ': return 1; // matched
+      case ' ': return true; // matched
       default: goto skip_name;
     }
   }
@@ -46,7 +69,7 @@ compare:
   }
 skip_name:
   switch (*name) {
-    case '\0': return 0; // didn't match
+    case '\0': return false; // didn't match
     case ' ': ++name; goto skip_space;
     default: ++name; goto skip_name;
   }
@@ -190,9 +213,57 @@ next_char_1:
 #endif
 }
 
+extern char **environ;
+
+static bool CliCompletionBash() {
+  typedef struct {
+    const char *value, *name;
+  } EnvVar;
+
+  struct {
+    EnvVar key, line, point, type;
+  } bashComp = {
+    // https://man7.org/linux/man-pages/man1/bash.1.html
+    { NULL, "COMP_KEY" },
+    { NULL, "COMP_LINE" },
+    { NULL, "COMP_POINT" },
+    { NULL, "COMP_TYPE" }
+  };
+
+  const unsigned nComps = sizeof(bashComp) / sizeof(EnvVar);
+  for (int i = 0;; ++i) {
+    const char* var = environ[i];
+    if (var == NULL)
+      break;
+    const char* d = CliEnvVarEnd(var);
+
+    for (unsigned i = 0; i < nComps; ++i) {
+      EnvVar* comp = (EnvVar*)&bashComp + i;
+      if (CliStrEqZE(comp->name, var, d))
+        comp->value = d + 1;
+    }
+  }
+  for (unsigned i = 0; i < nComps; ++i) {
+    EnvVar* comp = (EnvVar*)&bashComp + i;
+    if (comp->value == NULL)
+      return false;
+  }
+
+  for (unsigned i = 0; i < nComps; ++i) {
+    EnvVar* comp = (EnvVar*)&bashComp + i;
+    printf("%s = %s\n", comp->name, comp->value);
+  }
+
+  return true;
+}
+
 CliStatusCode CliParse(
   CliCommand* command, const char* const* args, unsigned nArgs
 ) {
+  if (CliCompletionBash()) {
+    return CLI_STATUS_COMP_BASH;
+  }
+
 #ifndef CLI_UNIT_TEST
   CliCommand* rootCommand = command;
 #endif
