@@ -1,12 +1,7 @@
 #include "cli.h"
 
-#ifndef CLI_UNIT_TEST
-#include <stdio.h>
-#else
-#include <stddef.h>
-#endif
 #include <stdbool.h>
-
+#include <stdio.h>
 #include <string.h>
 
 #define CLI_DOUBLE_DASH 2
@@ -42,7 +37,7 @@ next:
   return -1u;
 }
 
-static const char* CliEnvVarEnd(const char* var) {
+static const char* CliEnvVarNameEnd(const char* var) {
 next:
   switch (*var) {
     case '=':
@@ -233,94 +228,9 @@ next_char_1:
 #endif
 }
 
-extern char **environ;
-
-static bool CliCompletionBash(CliCommand* command) {
-  typedef struct {
-    const char *value, *name;
-  } EnvVar;
-
-  struct {
-    EnvVar key, line, point, type;
-  } bashComp = {
-    // https://man7.org/linux/man-pages/man1/bash.1.html
-    { NULL, "COMP_KEY" },
-    { NULL, "COMP_LINE" },
-    { NULL, "COMP_POINT" },
-    { NULL, "COMP_TYPE" }
-  };
-  const unsigned nComps = sizeof(bashComp) / sizeof(EnvVar);
-
-  for (int i = 0;; ++i) {
-    const char* var = environ[i];
-    if (var == NULL)
-      break;
-    const char* d = CliEnvVarEnd(var);
-
-    for (unsigned i = 0; i < nComps; ++i) {
-      EnvVar* comp = (EnvVar*)&bashComp + i;
-      if (CliStrEqZE(comp->name, var, d))
-        comp->value = d + 1;
-    }
-  }
-
-  for (unsigned i = 0; i < nComps; ++i) {
-    EnvVar* comp = (EnvVar*)&bashComp + i;
-    if (comp->value == NULL)
-      return false;
-  }
-
-  flog = fopen("/home/ivanp/sandbox/cli/examples/comp.log", "a");
-
-  fprintf(flog, "\n");
-  for (unsigned i = 0; i < nComps; ++i) {
-    EnvVar* comp = (EnvVar*)&bashComp + i;
-    fprintf(flog, "%s = %s\n", comp->name, comp->value);
-  }
-
-  const unsigned point = CliParseUnsigned(bashComp.point.value);
-  if (point == -1u)
-    return true;
-
-  const char* p = bashComp.line.value + point - 1;
-  if (p[0] == '-' && (p[-1] == ' ' || (p[-1] == '-' && p[-2] == ' '))) {
-    CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
-    for (; opts != optsEnd; ++opts) {
-      CliOption* opt = *opts;
-      const char *a = opt->name, *b;
-      fprintf(flog, "%s\n", a);
-skip_space:
-      switch (*a) {
-        case ' ': ++a; goto skip_space;
-        case '\0': continue;
-      }
-
-      for (b = a; ; ++b) {
-        const char c = *b;
-        if (c == '\0' || c == ' ') {
-          const int n = b - a;
-          printf("%s%.*s\n", "--" + (n == 1), n, a);
-          a = b + (c != '\0');
-          goto skip_space;
-        }
-      }
-    }
-  }
-
-  // fprintf(flog, "%u %c\n", point, bashComp.line.value[point-1]);
-  // fprintf(flog, "%u %s %ld\n", point, bashComp.point.value, strlen(bashComp.point.value));
-
-  fclose(flog);
-  return true;
-}
-
-CliStatusCode CliParse(
+static CliStatusCode CliParseImpl(
   CliCommand* command, const char* const* args, unsigned nArgs
 ) {
-  if (CliCompletionBash(command)) {
-    return CLI_STATUS_COMP_BASH;
-  }
-
 #ifndef CLI_UNIT_TEST
   CliCommand* rootCommand = command;
 #endif
@@ -412,4 +322,100 @@ help:
   cliHelpOption.action(NULL, rootCommand);
 #endif
   return CLI_STATUS_HELP;
+}
+
+extern char **environ;
+
+// 1. Resolve quotes
+// 2. Remove substitutions, subshell invocations, etc.
+// 3. Ask for variables
+// 4. Parse permissively, skipping bad arguments
+
+static bool CliCompletionBash(CliCommand* command) {
+  typedef struct {
+    const char *value, *name;
+  } EnvVar;
+
+  struct {
+    EnvVar key, line, point, type;
+  } bashComp = {
+    // https://man7.org/linux/man-pages/man1/bash.1.html
+    { NULL, "COMP_KEY" },
+    { NULL, "COMP_LINE" },
+    { NULL, "COMP_POINT" },
+    { NULL, "COMP_TYPE" }
+  };
+  const unsigned nComps = sizeof(bashComp) / sizeof(EnvVar);
+
+  for (int i = 0;; ++i) {
+    const char* var = environ[i];
+    if (var == NULL)
+      break;
+    const char* d = CliEnvVarNameEnd(var);
+
+    for (unsigned i = 0; i < nComps; ++i) {
+      EnvVar* comp = (EnvVar*)&bashComp + i;
+      if (CliStrEqZE(comp->name, var, d))
+        comp->value = d + 1;
+    }
+  }
+
+  for (unsigned i = 0; i < nComps; ++i) {
+    EnvVar* comp = (EnvVar*)&bashComp + i;
+    if (comp->value == NULL)
+      return false;
+  }
+
+  flog = fopen("/home/ivanp/projects/cli/examples/comp.log", "a");
+
+  fprintf(flog, "\n");
+  for (unsigned i = 0; i < nComps; ++i) {
+    EnvVar* comp = (EnvVar*)&bashComp + i;
+    fprintf(flog, "%s = %s\n", comp->name, comp->value);
+  }
+
+  const unsigned point = CliParseUnsigned(bashComp.point.value);
+  if (point == -1u)
+    return true;
+
+  const char* p = bashComp.line.value + point - 1;
+  if (p[0] == '-' && (p[-1] == ' ' || (p[-1] == '-' && p[-2] == ' '))) {
+    CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
+    for (; opts != optsEnd; ++opts) {
+      CliOption* opt = *opts;
+      const char *a = opt->name, *b;
+      fprintf(flog, "%s\n", a);
+skip_space:
+      switch (*a) {
+        case ' ': ++a; goto skip_space;
+        case '\0': continue;
+      }
+
+      for (b = a; ; ++b) {
+        const char c = *b;
+        if (c == '\0' || c == ' ') {
+          const int n = b - a;
+          printf("%s%.*s\n", "--" + (n == 1), n, a);
+          a = b + (c != '\0');
+          goto skip_space;
+        }
+      }
+    }
+  }
+
+  // fprintf(flog, "%u %c\n", point, bashComp.line.value[point-1]);
+  // fprintf(flog, "%u %s %ld\n", point, bashComp.point.value, strlen(bashComp.point.value));
+
+  fclose(flog);
+  return true;
+}
+
+CliStatusCode CliParse(
+  CliCommand* command, const char* const* args, unsigned nArgs
+) {
+  if (CliCompletionBash(command)) {
+    return CLI_STATUS_COMP_BASH;
+  }
+
+  return CliParseImpl(command, args, nArgs);
 }
