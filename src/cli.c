@@ -336,49 +336,49 @@ static bool CliCompletionBash(CliCommand* command) {
     const char *value, *name;
   } EnvVar;
 
+  // Bash completion variables
   struct {
     EnvVar key, line, point, type;
-  } bashComp = {
+  } comp = {
     // https://man7.org/linux/man-pages/man1/bash.1.html
     { NULL, "COMP_KEY" },
     { NULL, "COMP_LINE" },
     { NULL, "COMP_POINT" },
     { NULL, "COMP_TYPE" }
   };
-  const unsigned nComps = sizeof(bashComp) / sizeof(EnvVar);
+  const EnvVar* const endCompVars =
+    (EnvVar*)&comp + (sizeof(comp) / sizeof(EnvVar));
 
-  for (int i = 0;; ++i) {
-    const char* var = environ[i];
+  // Collect bash completion variables
+  for (char** env = environ;; ++env) {
+    const char* var = *env;
     if (var == NULL)
       break;
     const char* d = CliEnvVarNameEnd(var);
 
-    for (unsigned i = 0; i < nComps; ++i) {
-      EnvVar* comp = (EnvVar*)&bashComp + i;
-      if (CliStrEqZE(comp->name, var, d))
-        comp->value = d + 1;
+    for (EnvVar *compVar = (EnvVar*)&comp; compVar < endCompVars; ++compVar) {
+      if (CliStrEqZE(compVar->name, var, d))
+        compVar->value = d + 1;
     }
   }
 
-  for (unsigned i = 0; i < nComps; ++i) {
-    EnvVar* comp = (EnvVar*)&bashComp + i;
-    if (comp->value == NULL)
+  for (EnvVar *compVar = (EnvVar*)&comp; compVar < endCompVars; ++compVar) {
+    if (compVar->value == NULL)
       return false;
   }
 
   flog = fopen("/home/ivanp/projects/cli/examples/comp.log", "a");
 
   fprintf(flog, "\n");
-  for (unsigned i = 0; i < nComps; ++i) {
-    EnvVar* comp = (EnvVar*)&bashComp + i;
-    fprintf(flog, "%s = %s\n", comp->name, comp->value);
+  for (EnvVar *compVar = (EnvVar*)&comp; compVar < endCompVars; ++compVar) {
+    fprintf(flog, "%s = %s\n", compVar->name, compVar->value);
   }
 
-  const unsigned point = CliParseUnsigned(bashComp.point.value);
+  const unsigned point = CliParseUnsigned(comp.point.value);
   if (point == -1u)
     return true;
 
-  const char* p = bashComp.line.value + point - 1;
+  const char* p = comp.line.value + point - 1;
   if (p[0] == '-' && (p[-1] == ' ' || (p[-1] == '-' && p[-2] == ' '))) {
     CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
     for (; opts != optsEnd; ++opts) {
@@ -403,8 +403,8 @@ skip_space:
     }
   }
 
-  // fprintf(flog, "%u %c\n", point, bashComp.line.value[point-1]);
-  // fprintf(flog, "%u %s %ld\n", point, bashComp.point.value, strlen(bashComp.point.value));
+  // fprintf(flog, "%u %c\n", point, comp.line.value[point-1]);
+  // fprintf(flog, "%u %s %ld\n", point, comp.point.value, strlen(comp.point.value));
 
   fclose(flog);
   return true;
