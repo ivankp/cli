@@ -238,100 +238,89 @@ next_char_1:
 #endif
 }
 
-static CliStatusCode CliParseImpl(
-  CliCommand* command, const char* const* args, unsigned nArgs
-) {
-#ifndef CLI_UNIT_TEST
-  CliCommand* rootCommand = command;
-#endif
-  unsigned flags = 0;
-  const char* const* const argsEnd = args + nArgs;
-  for (; args != argsEnd; ++args) {
-    const char* arg = *args;
+typedef struct {
+  CliCommand* command;
+  unsigned flags;
+} CliParserState;
 
-    if (flags & CLI_DOUBLE_DASH) { // ..........................................
-      if (arg[0] == '-' && arg[1] == '-' && arg[2] == '\0') {
-        flags ^= CLI_DOUBLE_DASH;
-      } else {
-        goto value;
-      }
+// Parse a single command line argument
+static CliStatusCode CliParseArg(CliParserState* state, const char* arg) {
+  if (state->flags & CLI_DOUBLE_DASH) { // .....................................
+    if (arg[0] == '-' && arg[1] == '-' && arg[2] == '\0') {
+      state->flags ^= CLI_DOUBLE_DASH;
+    } else {
+      goto value;
+    }
 
-    } else if (arg[0] != '-' || arg[1] == '\0') { // value or command ..........
-      CliCommand* cmd = CliMatchCommand(command, arg);
-      if (cmd) {
-        command->command = cmd;
-        command = cmd;
-        // TODO: finalize options for the previous command level
-      } else {
+  } else if (arg[0] != '-' || arg[1] == '\0') { // value or command ............
+    CliCommand* cmd = CliMatchCommand(state->command, arg);
+    if (cmd) {
+      state->command->command = cmd;
+      state->command = cmd;
+      // TODO: finalize options for the previous command level
+    } else {
 value:
-        ;
-      }
+      ;
+    }
 
-    } else if (arg[1] != '-') { // short option ................................
-      ++arg;
-      const char* value = arg + 1;
-      CliOption* opt = CliMatchOption(command, arg, value);
+  } else if (arg[1] != '-') { // short option ..................................
+    ++arg;
+    const char* value = arg + 1;
+    CliOption* opt = CliMatchOption(state->command, arg, value);
 
-      if (CliMatchName(cliHelpOption.name, arg, value))
-        goto help;
+    if (CliMatchName(cliHelpOption.name, arg, value))
+      return CLI_STATUS_HELP;
 
-      // TODO: -abcd
+    // TODO: -abcd
 
-      if (!opt) {
+    if (!opt) {
 #ifndef CLI_UNIT_TEST
-        fprintf(stderr, "Unknown option -%c\n", *arg);
+      fprintf(stderr, "Unknown option -%c\n", *arg);
 #endif
-        return CLI_STATUS_ERROR;
+      return CLI_STATUS_ERROR;
+    }
+
+    if (*value == '\0')
+      value = NULL;
+
+    (*opt->action)(value, opt->data);
+
+  } else if (arg[2] == '\0') { // just -- ......................................
+    state->flags ^= CLI_DOUBLE_DASH;
+
+  } else { // long option ......................................................
+    arg += 2;
+    const char *b = arg, *value;
+    for (;; ++b) {
+      switch (*b) {
+        case '\0':
+          value = NULL;
+          goto match_option;
+        case '=':
+          value = b + 1;
+          goto match_option;
       }
-
-      if (*value == '\0')
-        value = NULL;
-
-      (*opt->action)(value, opt->data);
-
-    } else if (arg[2] == '\0') { // just -- ....................................
-      flags ^= CLI_DOUBLE_DASH;
-
-    } else { // long option ....................................................
-      arg += 2;
-      const char *b = arg, *value;
-      for (;; ++b) {
-        switch (*b) {
-          case '\0':
-            value = NULL;
-            goto match_option;
-          case '=':
-            value = b + 1;
-            goto match_option;
-        }
-      }
+    }
 
 match_option: ;
-      CliOption* opt = CliMatchOption(command, arg, b);
+    CliOption* opt = CliMatchOption(state->command, arg, b);
 
-      if (CliMatchName(cliHelpOption.name, arg, b))
-        goto help;
+    if (CliMatchName(cliHelpOption.name, arg, b))
+      return CLI_STATUS_HELP;
 
-      if (!opt) {
+    if (!opt) {
 #ifndef CLI_UNIT_TEST
-        fprintf(stderr, "Unknown option --%.*s\n", (int)(b - arg), arg);
+      fprintf(stderr, "Unknown option --%.*s\n", (int)(b - arg), arg);
 #endif
-        return CLI_STATUS_ERROR;
-      }
-
-      (*opt->action)(value, opt->data);
+      return CLI_STATUS_ERROR;
     }
-  } // end args loop
+
+    (*opt->action)(value, opt->data);
+  }
 
   // TODO: `--opt arg` same as `--opt=arg`
 
   return CLI_STATUS_OK;
-
-help:
-#ifndef CLI_UNIT_TEST
-  cliHelpOption.action(NULL, rootCommand);
-#endif
-  return CLI_STATUS_HELP;
 }
 
 static CliStr CliBashNextArg(const char** line) {
@@ -366,7 +355,7 @@ done:
 
 extern char **environ;
 
-static bool CliCompletionBash(CliCommand* command) {
+static bool CliCompletionBash(CliParserState* state) {
   typedef struct {
     const char *value, *name;
   } EnvVar;
@@ -415,7 +404,8 @@ static bool CliCompletionBash(CliCommand* command) {
 
   const char* p = comp.line.value + point - 1;
   if (p[0] == '-' && (p[-1] == ' ' || (p[-1] == '-' && p[-2] == ' '))) {
-    CliOption **opts = command->options, **optsEnd = opts + command->nOptions;
+    CliOption **opts = state->command->options,
+              **optsEnd = opts + state->command->nOptions;
     for (; opts != optsEnd; ++opts) {
       CliOption* opt = *opts;
       const char *a = opt->name, *b;
@@ -448,9 +438,30 @@ skip_space:
 CliStatusCode CliParse(
   CliCommand* command, const char* const* args, unsigned nArgs
 ) {
-  if (CliCompletionBash(command)) {
+  CliParserState state = { command, 0 };
+
+  if (CliCompletionBash(&state)) {
     return CLI_STATUS_COMP_BASH;
   }
 
-  return CliParseImpl(command, args, nArgs);
+  // TODO: look for help flags before full parsing?
+
+  const char* const* const argsEnd = args + nArgs;
+  for (; args != argsEnd; ++args) {
+    switch (CliParseArg(&state, *args)) {
+      case CLI_STATUS_ERROR:
+        return CLI_STATUS_ERROR;
+      case CLI_STATUS_HELP:
+        goto help;
+      default: ;
+    }
+  }
+
+  return CLI_STATUS_OK;
+
+help:
+#ifndef CLI_UNIT_TEST
+  cliHelpOption.action(NULL, state.command);
+#endif
+  return CLI_STATUS_HELP;
 }
