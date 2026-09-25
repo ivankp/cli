@@ -171,6 +171,39 @@ skip_space:
 }
 #endif
 
+#ifndef CLI_UNIT_TEST
+static void CliPrintHelpCommand(CliCommand* cmd) {
+  const char *a = cmd->name, *b;
+  char sep = ' ';
+
+skip_space:
+  switch (*a) {
+    case ' ': ++a; goto skip_space;
+    case '\0': return;
+  }
+
+  for (b = a; ; ++b) {
+    const char c = *b;
+    if (c == '\0' || c == ' ') {
+      const int n = b - a;
+      if (n > 0) { // TODO: is this always true?
+        printf("%c %.*s", sep, n, a);
+        sep = ',';
+      }
+      if (c == '\0') // TODO: simplify
+        break;
+      a = b + 1;
+      goto skip_space;
+    }
+  }
+  printf("\n");
+  const char* h = cmd->help;
+  if (h && *h) {
+    printf("    %s\n", h);
+  }
+}
+#endif
+
 static void CliPrintHelp(const char*, CliCommand*);
 
 CliOption cliHelpOption = {
@@ -187,6 +220,8 @@ static void CliPrintHelp(const char* value, CliCommand* cmd) {
   for (;;) {
     const char* name = cmd->name;
 
+    // commands can have space-separated aliases
+    // print only the first word in name
     int n = 0;
 next_char_1:
     switch (name[n]) {
@@ -196,26 +231,32 @@ next_char_1:
     }
     printf(" %.*s", n, name);
 
-    CliOption **opts = cmd->options, **optsEnd = opts + cmd->nOptions;
-    for (; opts != optsEnd; ++opts) {
-      CliPrintHelpOptionUsage(*opts);
-    }
-    CliPrintHelpOptionUsage(&cliHelpOption);
-
     if (!cmd->command)
       break;
     cmd = cmd->command;
   }
+
+  CliOption **opts = cmd->options, **optsEnd = opts + cmd->nOptions;
+  for (; opts != optsEnd; ++opts) {
+    CliPrintHelpOptionUsage(*opts);
+  }
+
   printf("\n");
 
   { // Top help text
-    const char* text = cmd->help;
-    if (text && *text) {
-      printf("\n%s\n", text);
+    const char* h = cmd->help;
+    if (h && *h) {
+      printf("\n%s\n", h);
     }
   }
 
-  // TODO: commands
+  if (cmd->nCommands) {
+    printf("\ncommands:\n");
+    CliCommand **cmds = cmd->commands, **cmdsEnd = cmds + cmd->nCommands;
+    for (; cmds != cmdsEnd; ++cmds) {
+      CliPrintHelpCommand(*cmds);
+    }
+  }
 
   // TODO: positional arguments
 
@@ -461,7 +502,7 @@ CliStatusCode CliParse(
 
 help:
 #ifndef CLI_UNIT_TEST
-  cliHelpOption.action(NULL, state.command);
+  cliHelpOption.action(NULL, command);
 #endif
   return CLI_STATUS_HELP;
 }
