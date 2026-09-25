@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-EXAMPLES := 1-cats-dogs
+EXAMPLES := 1-cats-dogs 2-abcd
 
 all: $(EXAMPLES)
 

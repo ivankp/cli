@@ -6,6 +6,16 @@
 
 #define CLI_DOUBLE_DASH 2
 
+typedef struct {
+  const char* a;
+  const char* b;
+} CliStr;
+
+typedef struct {
+  char* a;
+  const char* b;
+} CliMutStr;
+
 const char* CliPathName(const char* path) {
   const char* name = path;
 next:
@@ -49,10 +59,10 @@ next:
   }
 }
 
-static bool CliStrEqZE(const char* ref, const char* str, const char* end) {
+static bool CliStrEqZE(const char* ref, const char* str, const char* strEnd) {
   for (;; ++ref, ++str) {
     const char c = *ref;
-    if (str == end)
+    if (str == strEnd)
       return c == '\0';
     if (c == '\0' || c != *str)
       return false;
@@ -324,12 +334,37 @@ help:
   return CLI_STATUS_HELP;
 }
 
-extern char **environ;
+static CliStr CliBashNextArg(const char** line) {
+  const char *a = *line, *b;
 
-// 1. Resolve quotes
-// 2. Remove substitutions, subshell invocations, etc.
-// 3. Ask for variables
-// 4. Parse permissively, skipping bad arguments
+skip_space:
+  switch (*a) {
+    case ' ':
+    case '\t': ++a; goto skip_space;
+    case '\0': // end of line
+      *line = NULL;
+      return (CliStr){ NULL, NULL };
+  }
+
+  b = a;
+
+arg:
+  switch (*b) {
+    case ' ':
+    case '\t': // end of argument
+      *line = b;
+      goto done;
+    case '\0': // end of line
+      *line = NULL;
+      goto done;
+    default: ++b; goto arg;
+  }
+
+done:
+  return (CliStr){ a, b };
+}
+
+extern char **environ;
 
 static bool CliCompletionBash(CliCommand* command) {
   typedef struct {
