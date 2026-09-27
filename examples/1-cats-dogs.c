@@ -22,7 +22,7 @@ int main(int argc, const char* const* argv) {
 
     int ec = CliParse(&cmd, argv + 1, argc - 1);
     if (ec != 0)
-        return ec > 0;
+        return ec < 0; // error codes are negative
 
     printf("%5u cats\n%5u dogs\n", cats, dogs);
 
