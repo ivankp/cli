@@ -136,12 +136,12 @@ TEST(short_opt) {
     {
         cnt = 0;
         const char* args[] = { "-A" };
-        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) < 0);
     }
     {
         cnt = 0;
         const char* args[] = { "-a", "-A" };
-        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) < 0);
     }
 
     // double dash -------------------------------------------------------------
@@ -220,13 +220,13 @@ TEST(long_opt) {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "--opt-A" };
-        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) < 0);
     }
     {
         cntA = 0;
         cntB = 0;
         const char* args[] = { "--opt-a " };
-        TEST_TRUE(CliParse(&command, args, LEN(args)) > 0);
+        TEST_TRUE(CliParse(&command, args, LEN(args)) < 0);
     }
 }
 

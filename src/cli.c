@@ -3,18 +3,23 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h> // malloc
 
-#define CLI_DOUBLE_DASH 2
+// Ideas
+// - allow options to fall through to the subsequent command levels
+// - min & max number of values
+// - allow option repetition (--opt --opt)
+// - options with no name (positional arguments)
+// - greedy (default) vs lazy options?
+// - regex-like rules for multiple nameless options
+// - value sets (choices)
+
+FILE *flog; // debug
 
 typedef struct {
-  const char* a;
-  const char* b;
-} CliStr;
-
-typedef struct {
-  char* a;
-  const char* b;
-} CliMutStr;
+  CliCommand* command;
+  int flags;
+} CliParserState;
 
 const char* CliPathName(const char* path) {
   const char* name = path;
@@ -28,8 +33,6 @@ next:
     default: goto next;
   }
 }
-
-FILE *flog;
 
 unsigned CliParseUnsigned(const char* str) {
   unsigned u = 0;
@@ -279,11 +282,6 @@ next_char_1:
 #endif
 }
 
-typedef struct {
-  CliCommand* command;
-  unsigned flags;
-} CliParserState;
-
 // Parse a single command line argument
 static CliStatusCode CliParseArg(CliParserState* state, const char* arg) {
   if (state->flags & CLI_DOUBLE_DASH) { // .....................................
@@ -364,21 +362,29 @@ match_option: ;
   return CLI_STATUS_OK;
 }
 
-static CliStr CliBashNextArg(const char** line) {
+static const char* CliBashNextArg(const char** line, const char* point) {
   const char *a = *line, *b;
 
 skip_space:
+  if (!(a < point))
+    goto noarg;
+
   switch (*a) {
     case ' ':
     case '\t': ++a; goto skip_space;
-    case '\0': // end of line
-      *line = NULL;
-      return (CliStr){ NULL, NULL };
+    case '\0': goto noarg; // end of line
   }
 
   b = a;
 
+  // TODO: quotes, escapes, expansions
+
 arg:
+  if (!(b < point)) {
+    *line = NULL;
+    goto done;
+  }
+
   switch (*b) {
     case ' ':
     case '\t': // end of argument
@@ -390,8 +396,19 @@ arg:
     default: ++b; goto arg;
   }
 
-done:
-  return (CliStr){ a, b };
+done: ;
+  // TODO: Prevent these allocations from leaking.
+  // TODO: In the final implementation,
+  // TODO: these strings may need to live until the program stops.
+  const size_t len = b - a;
+  char* dup = malloc(len + 1);
+  memcpy(dup, a, len);
+  dup[len] = '\0';
+  return dup;
+
+noarg:
+  *line = NULL;
+  return NULL;
 }
 
 extern char **environ;
@@ -427,50 +444,33 @@ static bool CliCompletionBash(CliParserState* state) {
     }
   }
 
+  // Check that all COMP variables are present
   for (EnvVar *compVar = (EnvVar*)&comp; compVar < endCompVars; ++compVar) {
     if (compVar->value == NULL)
       return false;
-  }
-
-  flog = fopen("/home/ivanp/projects/cli/examples/comp.log", "a");
-
-  fprintf(flog, "\n");
-  for (EnvVar *compVar = (EnvVar*)&comp; compVar < endCompVars; ++compVar) {
-    fprintf(flog, "%s = %s\n", compVar->name, compVar->value);
   }
 
   const unsigned point = CliParseUnsigned(comp.point.value);
   if (point == -1u)
     return true;
 
-  const char* p = comp.line.value + point - 1;
-  if (p[0] == '-' && (p[-1] == ' ' || (p[-1] == '-' && p[-2] == ' '))) {
-    CliOption **opts = state->command->options,
-              **optsEnd = opts + state->command->nOptions;
-    for (; opts != optsEnd; ++opts) {
-      CliOption* opt = *opts;
-      const char *a = opt->name, *b;
-      fprintf(flog, "%s\n", a);
-skip_space:
-      switch (*a) {
-        case ' ': ++a; goto skip_space;
-        case '\0': continue;
-      }
-
-      for (b = a; ; ++b) {
-        const char c = *b;
-        if (c == '\0' || c == ' ') {
-          const int n = b - a;
-          printf("%s%.*s\n", "--" + (n == 1), n, a);
-          a = b + (c != '\0');
-          goto skip_space;
-        }
-      }
-    }
+  // Debug
+  flog = fopen("/home/ivanp/projects/cli/examples/comp.log", "a");
+  fprintf(flog, "\n");
+  for (EnvVar *compVar = (EnvVar*)&comp; compVar < endCompVars; ++compVar) {
+    fprintf(flog, "%s = %s\n", compVar->name, compVar->value);
   }
 
-  // fprintf(flog, "%u %c\n", point, comp.line.value[point-1]);
-  // fprintf(flog, "%u %s %ld\n", point, comp.point.value, strlen(comp.point.value));
+  state->flags = CLI_STATUS_COMP_BASH;
+
+  const char* arg;
+  const char* line = comp.line.value;
+  const char* const pointPtr = line + point;
+  while (line && (arg = CliBashNextArg(&line, pointPtr))) {
+    fprintf(flog, "%s\n", arg);
+    // if (CliParseArg(state, arg))
+    //   break;
+  }
 
   fclose(flog);
   return true;
