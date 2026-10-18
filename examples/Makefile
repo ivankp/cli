@@ -2,10 +2,12 @@
 
 EXAMPLES := 1-cats-dogs 2-abcd
 
+CFLAGS := -std=c99 -Wall -Wextra -pedantic -Wno-missing-field-initializers -O3
+
 all: $(EXAMPLES)
 
 %: %.c ../src/cli.c ../include/cli.h
-	gcc -std=c99 -Wall -Wextra -pedantic -O3 -I ../include $(filter %.c, $^) -o $@
+	gcc $(CFLAGS) -I ../include $(filter %.c, $^) -o $@
 
 clean:
 	rm $(EXAMPLES)

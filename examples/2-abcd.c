@@ -15,7 +15,7 @@ int main(int argc, const char* const* argv) {
 
     CliCommand abCmd = {
         "ab", LEN(abOpts), 0, abOpts, NULL,
-        "First subcommand", "", NULL
+        "First subcommand", ""
     };
 
     CliOption cOpt = { "c", &Echo, "opt c", "" };
@@ -24,7 +24,7 @@ int main(int argc, const char* const* argv) {
 
     CliCommand cdCmd = {
         "cd CD", LEN(cdOpts), 0, cdOpts, NULL,
-        "Second subcommand", "", NULL
+        "Second subcommand", ""
     };
 
     CliCommand* cmds[] = { &abCmd, &cdCmd };
@@ -35,7 +35,7 @@ int main(int argc, const char* const* argv) {
 
     CliCommand cmd = {
         "abcd", LEN(opts), LEN(cmds), opts, cmds,
-        "Program with two subcommands", "", NULL
+        "Program with two subcommands", ""
     };
 
     int ec = CliParse(&cmd, argv + 1, argc - 1);

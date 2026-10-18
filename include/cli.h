@@ -22,6 +22,12 @@ struct CliOption {
   CliAction action;
   void* data;
   const char* help;
+
+  unsigned char min; // minimum required number of values
+  unsigned char max; // maximum allowed number of values
+  unsigned char canRepeat : 1; // --opt --opt
+  unsigned char fallThrough : 1; // can be used at deeper subcommand levels
+  unsigned char positional : 1; // can be used without option
 };
 
 extern CliOption cliHelpOption;

@@ -13,19 +13,19 @@
 
 #define TEST_TRUE(X) \
     if (!(X)) { \
-        puts(TEST_PREFIX #X " is false"); \
+        puts(TEST_PREFIX "\033[31mFALSE:\033[0m " #X); \
         exit(1); \
     }
 
 #define TEST_FALSE(X) \
     if ((X)) { \
-        puts(TEST_PREFIX #X " is true"); \
+        puts(TEST_PREFIX "\033[31mTRUE:\033[0m " #X); \
         exit(1); \
     }
 
 #define TEST_FAIL \
     { \
-        puts(TEST_PREFIX "test failed"); \
+        puts(TEST_PREFIX); \
         exit(1); \
     }
 

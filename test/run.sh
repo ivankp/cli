@@ -84,6 +84,7 @@ for suite in "${suites[@]}"; do
                     cmd=("$comp" \
                         -std="$std" \
                         -Wall -Wextra -Werror -pedantic \
+                        -Wno-missing-field-initializers \
                         "${comp_args[@]}" \
                         -I. -I../include \
                         -DCLI_UNIT_TEST \

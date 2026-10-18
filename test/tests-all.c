@@ -30,9 +30,9 @@ TEST(match_name) {
         };
         for (unsigned i = 0; i < LEN(param_opt); ++i) {
             int cnt = 0;
-            CliOption opt = { param_opt[i], &CountOpt, &cnt, NULL };
+            CliOption opt = { param_opt[i], &CountOpt, &cnt };
             CliOption* options[] = { &opt };
-            CliCommand command = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
+            CliCommand command = { NULL, LEN(options), 0, options };
 
             {
                 const char* args[] = { "--cat" };
@@ -42,7 +42,7 @@ TEST(match_name) {
             for (unsigned j = 0; j < LEN(param_bad_arg); ++j) {
                 cnt = 0;
                 const char* args[] = { param_bad_arg[j] };
-                TEST_TRUE(CliParse(&command, args, LEN(args)) == 1);
+                TEST_TRUE(CliParse(&command, args, LEN(args)) == -1);
                 TEST_TRUE(cnt == 0);
             }
         }
@@ -58,9 +58,9 @@ TEST(match_name) {
         };
         for (unsigned i = 0; i < LEN(param_opt); ++i) {
             int cnt = 0;
-            CliOption opt = { param_opt[i], &CountOpt, &cnt, NULL };
+            CliOption opt = { param_opt[i], &CountOpt, &cnt };
             CliOption* options[] = { &opt };
-            CliCommand command = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
+            CliCommand command = { NULL, LEN(options), 0, options };
 
             {
                 const char* args[] = { "-c" };
@@ -70,7 +70,7 @@ TEST(match_name) {
             for (unsigned j = 0; j < LEN(param_bad_arg); ++j) {
                 cnt = 0;
                 const char* args[] = { param_bad_arg[j] };
-                TEST_TRUE(CliParse(&command, args, LEN(args)) == 1);
+                TEST_TRUE(CliParse(&command, args, LEN(args)) == -1);
                 TEST_TRUE(cnt == 0);
             }
         }
@@ -79,10 +79,10 @@ TEST(match_name) {
 
 TEST(short_opt) {
     int cnt = 0;
-    CliOption opt_a = { "a flag   b", &CountOpt, &cnt, NULL };
-    CliOption opt_2 = { "aa bb ab ba", &DoNothing, NULL, NULL };
+    CliOption opt_a = { "a flag   b", &CountOpt, &cnt };
+    CliOption opt_2 = { "aa bb ab ba", &DoNothing };
     CliOption* options[] = { &opt_a, &opt_2 };
-    CliCommand command = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
+    CliCommand command = { NULL, LEN(options), 0, options };
 
     // short option ------------------------------------------------------------
     {
@@ -168,10 +168,10 @@ TEST(short_opt) {
 TEST(long_opt) {
     int cntA = 0;
     int cntB = 0;
-    CliOption opt_a = { "a opt-a", &CountOpt, &cntA, NULL };
-    CliOption opt_b = { "opt-b b", &CountOpt, &cntB, NULL };
+    CliOption opt_a = { "a opt-a", &CountOpt, &cntA };
+    CliOption opt_b = { "opt-b b", &CountOpt, &cntB };
     CliOption* options[] = { &opt_a, &opt_b };
-    CliCommand command = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
+    CliCommand command = { NULL, LEN(options), 0, options };
 
     // short option ------------------------------------------------------------
     {
@@ -236,9 +236,9 @@ void SetString(const char* value, void* strPtr) {
 
 TEST(explicit_value) {
     const char* value = "default";
-    CliOption opt = { "a opt-a", &SetString, &value, NULL };
+    CliOption opt = { "a opt-a", &SetString, &value };
     CliOption* options[] = { &opt };
-    CliCommand command = { NULL, LEN(options), 0, options, NULL, NULL, NULL, NULL };
+    CliCommand command = { NULL, LEN(options), 0, options };
 
     {
         const char* args[] = { NULL };
