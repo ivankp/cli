@@ -285,8 +285,8 @@ next_char_1:
 
 // Parse a single command line argument
 static CliStatusCode CliParseArg(CliParserState* state, const char* arg) {
-  CliOption* opt;
-  const char* value;
+  CliOption* opt = state->option;
+  const char *value, *optEnd;
 
   if (state->flags & CLI_DOUBLE_DASH) { // closing double dash .................
     if (arg[0] == '-' && arg[1] == '-' && arg[2] == '\0')
@@ -305,35 +305,19 @@ static CliStatusCode CliParseArg(CliParserState* state, const char* arg) {
 
 value:
     value = arg;
-    opt = state->option;
     if (!opt) {
       // TODO: check if a positional argument is ok
       // TODO: regex logic
-      return CLI_STATUS_ERROR;
+      return CLI_ERROR_POSITIONAL;
     }
 
   } else if (arg[1] != '-') { // short option ..................................
+next_short:
     ++arg;
-    value = arg + 1;
-    opt = CliMatchOption(state->command, arg, value);
+    optEnd = arg + 1;
+    value = *optEnd ? optEnd : NULL;
 
-    if (!opt) {
-      // help has lowest precedence
-      if (CliMatchName(cliHelpOption.name, arg, value))
-        return CLI_STATUS_HELP;
-
-#ifndef CLI_UNIT_TEST
-      fprintf(stderr, "Unknown option -%c\n", *arg);
-#endif
-      return CLI_STATUS_ERROR;
-    }
-
-    // TODO: -abcd
-
-    state->option = opt;
-
-    if (*value == '\0')
-      value = NULL;
+    goto match_option;
 
   } else if (arg[2] == '\0') { // opening double dash ..........................
 double_dash:
@@ -342,39 +326,70 @@ double_dash:
 
   } else { // long option ......................................................
     arg += 2;
-    const char *b = arg;
-    for (;; ++b) {
-      switch (*b) {
+    optEnd = arg;
+    for (;; ++optEnd) {
+      switch (*optEnd) {
         case '\0':
           value = NULL;
           goto match_option;
         case '=':
-          value = b + 1;
+          value = optEnd + 1;
           goto match_option;
       }
     }
 
 match_option: ;
-    opt = CliMatchOption(state->command, arg, b);
-
-    // help has lowest precedence
-    if (!opt && CliMatchName(cliHelpOption.name, arg, b))
-      return CLI_STATUS_HELP;
+    const int optLen = optEnd - arg;
+    opt = CliMatchOption(state->command, arg, optEnd);
 
     if (!opt) {
+      // help has lowest precedence
+      if (CliMatchName(cliHelpOption.name, arg, optEnd))
+        return CLI_STATUS_HELP;
+
 #ifndef CLI_UNIT_TEST
-      fprintf(stderr, "Unknown option --%.*s\n", (int)(b - arg), arg);
+      fprintf(stderr, "Unknown option %s%.*s\n",
+        "--" + (optLen == 1), optLen, arg);
 #endif
-      return CLI_STATUS_ERROR;
+      return CLI_ERROR_OPTION;
     }
+
+    if (opt->passed && !opt->canRepeat) {
+#ifndef CLI_UNIT_TEST
+      fprintf(stderr, "Repeated option %s%.*s\n",
+        "--" + (optLen == 1), optLen, arg);
+#endif
+      return CLI_ERROR_REPEATED;
+    }
+    opt->passed = true;
+
+    if (opt->max == 0) { // option takes no arguments
+      if (value && optLen > 1) {
+#ifndef CLI_UNIT_TEST
+        fprintf(stderr, "Option --%.*s takes no arguments\n", optLen, arg);
+#endif
+        return CLI_ERROR_ARG;
+      }
+      opt->action(NULL, opt->data);
+      state->option = NULL;
+      if (value)
+        goto next_short;
+      goto ok;
+    }
+
+    state->option = opt;
   }
 
   // TODO: `--opt arg` same as `--opt=arg`
 
-  // Invoke the callback function for the current option
-  CliAction action = opt->action;
-  if (action)
-    action(value, opt->data);
+  // If value is NULL, delay action execution until value is provided,
+  // or the next option is specified, or end of arguments
+  if (value) {
+    // Invoke the callback function for the current option
+    CliAction action = opt->action;
+    if (action)
+      action(value, opt->data);
+  }
 
 ok:
   return CLI_STATUS_OK;
@@ -507,13 +522,11 @@ CliStatusCode CliParse(
 
   const char* const* const argsEnd = args + nArgs;
   for (; args != argsEnd; ++args) {
-    switch (CliParseArg(&state, *args)) {
-      case CLI_STATUS_ERROR:
-        return CLI_STATUS_ERROR;
-      case CLI_STATUS_HELP:
-        goto help;
-      default: ;
-    }
+    const CliStatusCode status = CliParseArg(&state, *args);
+    if (status < 0)
+      return status;
+    if (status == CLI_STATUS_HELP)
+      goto help;
   }
 
   return CLI_STATUS_OK;
