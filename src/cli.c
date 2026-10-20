@@ -18,6 +18,7 @@ FILE *flog; // debug
 
 typedef struct {
   CliCommand* command;
+  CliOption* option;
   int flags;
 } CliParserState;
 
@@ -284,52 +285,64 @@ next_char_1:
 
 // Parse a single command line argument
 static CliStatusCode CliParseArg(CliParserState* state, const char* arg) {
-  if (state->flags & CLI_DOUBLE_DASH) { // .....................................
-    if (arg[0] == '-' && arg[1] == '-' && arg[2] == '\0') {
-      state->flags ^= CLI_DOUBLE_DASH;
-    } else {
-      goto value;
-    }
+  CliOption* opt;
+  const char* value;
 
-  } else if (arg[0] != '-' || arg[1] == '\0') { // value or command ............
+  if (state->flags & CLI_DOUBLE_DASH) { // closing double dash .................
+    if (arg[0] == '-' && arg[1] == '-' && arg[2] == '\0')
+      goto double_dash;
+    else
+      goto value;
+
+  } else if (arg[0] != '-' || arg[1] == '\0') { // command or value ............
     CliCommand* cmd = CliMatchCommand(state->command, arg);
     if (cmd) {
       state->command->command = cmd;
       state->command = cmd;
       // TODO: finalize options for the previous command level
-    } else {
+      goto ok;
+    }
+
 value:
-      ;
+    value = arg;
+    opt = state->option;
+    if (!opt) {
+      // TODO: check if a positional argument is ok
+      // TODO: regex logic
+      return CLI_STATUS_ERROR;
     }
 
   } else if (arg[1] != '-') { // short option ..................................
     ++arg;
-    const char* value = arg + 1;
-    CliOption* opt = CliMatchOption(state->command, arg, value);
-
-    if (CliMatchName(cliHelpOption.name, arg, value))
-      return CLI_STATUS_HELP;
-
-    // TODO: -abcd
+    value = arg + 1;
+    opt = CliMatchOption(state->command, arg, value);
 
     if (!opt) {
+      // help has lowest precedence
+      if (CliMatchName(cliHelpOption.name, arg, value))
+        return CLI_STATUS_HELP;
+
 #ifndef CLI_UNIT_TEST
       fprintf(stderr, "Unknown option -%c\n", *arg);
 #endif
       return CLI_STATUS_ERROR;
     }
 
+    // TODO: -abcd
+
+    state->option = opt;
+
     if (*value == '\0')
       value = NULL;
 
-    (*opt->action)(value, opt->data);
-
-  } else if (arg[2] == '\0') { // just -- ......................................
+  } else if (arg[2] == '\0') { // opening double dash ..........................
+double_dash:
     state->flags ^= CLI_DOUBLE_DASH;
+    goto ok;
 
   } else { // long option ......................................................
     arg += 2;
-    const char *b = arg, *value;
+    const char *b = arg;
     for (;; ++b) {
       switch (*b) {
         case '\0':
@@ -342,9 +355,10 @@ value:
     }
 
 match_option: ;
-    CliOption* opt = CliMatchOption(state->command, arg, b);
+    opt = CliMatchOption(state->command, arg, b);
 
-    if (CliMatchName(cliHelpOption.name, arg, b))
+    // help has lowest precedence
+    if (!opt && CliMatchName(cliHelpOption.name, arg, b))
       return CLI_STATUS_HELP;
 
     if (!opt) {
@@ -353,12 +367,16 @@ match_option: ;
 #endif
       return CLI_STATUS_ERROR;
     }
-
-    (*opt->action)(value, opt->data);
   }
 
   // TODO: `--opt arg` same as `--opt=arg`
 
+  // Invoke the callback function for the current option
+  CliAction action = opt->action;
+  if (action)
+    action(value, opt->data);
+
+ok:
   return CLI_STATUS_OK;
 }
 
@@ -479,7 +497,7 @@ static bool CliCompletionBash(CliParserState* state) {
 CliStatusCode CliParse(
   CliCommand* command, const char* const* args, unsigned nArgs
 ) {
-  CliParserState state = { command, 0 };
+  CliParserState state = { command, NULL, 0 };
 
   if (CliCompletionBash(&state)) {
     return CLI_STATUS_COMP_BASH;

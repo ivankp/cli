@@ -23,6 +23,7 @@ struct CliOption {
   void* data;
   const char* help;
 
+  unsigned char cnt; // count number of values
   unsigned char min; // minimum required number of values
   unsigned char max; // maximum allowed number of values
   unsigned char canRepeat : 1; // --opt --opt
