@@ -12,7 +12,7 @@ typedef enum {
   CLI_ERROR_OPTION = -1,
   CLI_ERROR_POSITIONAL = -2,
   CLI_ERROR_REPEATED = -3,
-  CLI_ERROR_ARG = -4,
+  CLI_ERROR_UNEXPECTED_ARG = -4,
 
 } CliStatusCode;
 
@@ -34,6 +34,8 @@ struct CliOption {
   unsigned char noTail : 1; // in `--opt a b`, b is not a value of opt
   unsigned char positional : 1; // can be used without option
   unsigned char fallThrough : 1; // can be used at deeper subcommand levels
+
+  // TODO: mutable state variables create problems for reusing option definitions
 
   // Not set by user
   unsigned char passed : 1; // set on first appearance

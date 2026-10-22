@@ -285,6 +285,8 @@ next_char_1:
 
 // Parse a single command line argument
 static CliStatusCode CliParseArg(CliParserState* state, const char* arg) {
+  // opt can be set at the top, because previous option may need to be
+  // finalized when the next option is encountered
   CliOption* opt = state->option;
   const char *value, *optEnd;
 
@@ -368,7 +370,7 @@ match_option: ;
 #ifndef CLI_UNIT_TEST
         fprintf(stderr, "Option --%.*s takes no arguments\n", optLen, arg);
 #endif
-        return CLI_ERROR_ARG;
+        return CLI_ERROR_UNEXPECTED_ARG;
       }
       opt->action(NULL, opt->data);
       state->option = NULL;
